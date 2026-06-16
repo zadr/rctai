@@ -66,7 +66,7 @@ namespace RctaiBuilder {
 
     savePark(name: string, callback: (result: RctaiBuilder.GameActionResultLike) => void): void {
       try {
-        console.executeLegacy(`save ${name}`);
+        console.executeLegacy(`save_park ${name}`);
         callback({});
       } catch (error) {
         callback({
