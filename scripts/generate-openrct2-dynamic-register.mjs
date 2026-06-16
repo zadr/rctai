@@ -7,7 +7,7 @@ const inputPath = process.argv[2] ?? "build/register-transcripts/register-transc
 const outputPath = process.argv[3] ?? "build/register-transcripts/register-transcripts.openrct2-dynamic.park-plan.json";
 const workModelPath = process.argv[4] ?? "build/register-transcripts/register-transcripts.work-model.json";
 
-const BASE_Z = 112;
+const BASE_Z = 176;
 const PARK_WIDTH = 360;
 const PARK_HEIGHT = 320;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
