@@ -108,7 +108,11 @@ namespace RctaiBuilder {
   const TRACK_PLACE_FLAG_INVERTED = 1 << 1;
   const LAND_SET_OWNERSHIP = 4;
   const OWNERSHIP_OWNED = 1 << 5;
-  const FLAT_LAND_STYLE = 0;
+  const PATH_FLAT = 0;
+  const PATH_SLOPED = 1;
+  const PATH_HEIGHT_STEP = 16;
+  const FOOTPRINT_SURFACE_CLEARANCE = 16;
+  const MAX_BUILD_Z = 248 * 8;
 
   export function createBuildSteps(plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
     const steps: RctaiBuilder.QueuedStep[] = [
@@ -161,7 +165,7 @@ namespace RctaiBuilder {
         setting: LAND_SET_OWNERSHIP,
         ownership: OWNERSHIP_OWNED
       })),
-      ...createTerrainPrepSteps(plan),
+      ...createHeightResolutionSteps(plan),
       RctaiBuilder.createGameActionStep("set park name", "parksetname", () => ({ name: plan.park.name }))
     ];
 
@@ -219,7 +223,7 @@ namespace RctaiBuilder {
 
   function createRideSteps(ride: RctaiBuilder.RidePlan, plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
     const steps: RctaiBuilder.QueuedStep[] = [];
-    const buildZ = planBuildZ(plan);
+    const fallbackBuildZ = planBuildZ(plan);
 
     steps.push(
       RctaiBuilder.createGameActionStep(
@@ -256,15 +260,15 @@ namespace RctaiBuilder {
       for (let index = 0; index < track.length; index += 1) {
         const segment = track[index];
         if (segment !== undefined) {
-          steps.push(createTrackStep(ride, segment, index, buildZ));
+          steps.push(createTrackStep(ride, segment, index, fallbackBuildZ));
         }
       }
     } else {
-      steps.push(createTrackStep(ride, { type: 0 }, 0, buildZ));
+      steps.push(createTrackStep(ride, { type: 0 }, 0, fallbackBuildZ));
     }
 
     if (!isRawVisualRide) {
-      steps.push(createEntranceExitStep(ride, false, buildZ), createEntranceExitStep(ride, true, buildZ));
+      steps.push(createEntranceExitStep(ride, false, fallbackBuildZ), createEntranceExitStep(ride, true, fallbackBuildZ));
     }
 
     steps.push(
@@ -331,7 +335,7 @@ namespace RctaiBuilder {
       }
 
       const trackInfo = adapter.getTrackSegment(segment.type);
-      const cursor = trackCursorForSegment(ride, segment, state, buildZ);
+      const cursor = trackCursorForSegment(ride, segment, state, rideBuildZ(ride, state, buildZ));
       const z = cursor.z - (trackInfo?.beginZ ?? 0);
       const nextCursor = advanceTrackCursor(cursor, trackInfo);
 
@@ -379,7 +383,7 @@ namespace RctaiBuilder {
       const width = Math.max(ride.footprint.w, 1);
       const localX = segment.x ?? index % width;
       const localY = segment.y ?? Math.floor(index / width);
-      const z = segment.z ?? buildZ;
+      const z = segment.z ?? rideBuildZ(ride, state, buildZ);
       const direction = normalizeDirection(segment.direction ?? ride.rotation ?? 0);
       adapter.placeRawTrack({
         x: ride.position.x + localX,
@@ -415,7 +419,7 @@ namespace RctaiBuilder {
       return {
         x: tileToGame(ride.position.x + exitOffset.x),
         y: tileToGame(ride.position.y + exitOffset.y),
-        z: exitOffset.z ?? buildZ,
+        z: exitOffset.z ?? rideBuildZ(ride, state, buildZ),
         direction: normalizeDirection(exitOffset.direction ?? ride.rotation ?? 0),
         ride: rideId,
         station: 0,
@@ -457,42 +461,57 @@ namespace RctaiBuilder {
 
   function createPathSteps(path: RctaiBuilder.PathPlan, plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
     const coords = expandPath(path, plan);
-    return coords.map((coord, index) =>
+    let cachedSpecs: PathTileBuildSpec[] | null = null;
+    const resolveSpecs = (adapter: RctaiBuilder.BuilderAdapter, state: RctaiBuilder.JobState): PathTileBuildSpec[] => {
+      cachedSpecs ??= createPathTileSpecs(path, coords, plan, adapter, state);
+      return cachedSpecs;
+    };
+
+    return coords.map((_coord, index) =>
       RctaiBuilder.createGameActionStep(`place path ${path.from}->${path.to} #${index}`, "footpathplace", (adapter, state) => {
-        const key = `${coord.x},${coord.y}`;
+        const spec = resolveSpecs(adapter, state)[index];
+        if (spec === undefined) {
+          return null;
+        }
+        const key = `${spec.coord.x},${spec.coord.y},${spec.z}`;
         if (state.pathTiles[key] === true) {
           return null;
         }
         state.pathTiles[key] = true;
         const objects = adapter.resolvePathObjects();
         return {
-          x: tileToGame(coord.x),
-          y: tileToGame(coord.y),
-          z: planBuildZ(plan),
+          x: tileToGame(spec.coord.x),
+          y: tileToGame(spec.coord.y),
+          z: spec.z,
           direction: 255,
           object: objects.surfaceObject,
           railingsObject: objects.railingsObject,
-          slopeType: 0,
-          slopeDirection: 0,
+          slopeType: spec.slopeType,
+          slopeDirection: spec.slopeDirection,
           constructFlags: 0
         };
       }, undefined, { critical: true })
     );
   }
 
-  function createTerrainPrepSteps(plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
-    if (plan.park.entrance.z !== undefined) {
-      return [];
+  function createHeightResolutionSteps(plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
+    const steps: RctaiBuilder.QueuedStep[] = [
+      RctaiBuilder.createAdapterStep("resolve entrance height", (adapter, state, done) => {
+        state.anchorBuildZ.entrance = resolveEntranceBuildZ(adapter, plan);
+        done({});
+      })
+    ];
+
+    for (const ride of plan.rides) {
+      steps.push(
+        RctaiBuilder.createAdapterStep(`resolve ride height ${ride.id}`, (adapter, state, done) => {
+          state.anchorBuildZ[ride.id] = resolveRideBuildZ(adapter, ride, plan);
+          done({});
+        })
+      );
     }
-    const landHeightUnits = RctaiBuilder.DEFAULT_Z / 8;
-    return terrainCoordsForPlan(plan).map((coord) =>
-      RctaiBuilder.createGameActionStep(`flatten tile ${coord.x},${coord.y}`, "landsetheight", () => ({
-        x: tileToGame(coord.x),
-        y: tileToGame(coord.y),
-        height: landHeightUnits,
-        style: FLAT_LAND_STYLE
-      }))
-    );
+
+    return steps;
   }
 
   function createSceneryStep(scenery: RctaiBuilder.SceneryPlan, plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep {
@@ -547,8 +566,189 @@ namespace RctaiBuilder {
     });
   }
 
+  interface PathTileBuildSpec {
+    coord: RctaiBuilder.Coord;
+    z: number;
+    slopeType: number;
+    slopeDirection: number;
+  }
+
+  function resolveEntranceBuildZ(adapter: RctaiBuilder.BuilderAdapter, plan: RctaiBuilder.ParkPlan): number {
+    const terrainZ = surfaceBuildZ(adapter, plan.park.entrance);
+    return clampBuildZ(Math.max(plan.park.entrance.z ?? RctaiBuilder.DEFAULT_Z, terrainZ ?? RctaiBuilder.DEFAULT_Z));
+  }
+
+  function resolveRideBuildZ(
+    adapter: RctaiBuilder.BuilderAdapter,
+    ride: RctaiBuilder.RidePlan,
+    plan: RctaiBuilder.ParkPlan
+  ): number {
+    const explicit = explicitRideOriginZ(ride);
+    const surfaceMax = maxSurfaceZ(adapter, rideTerrainCoords(ride, plan));
+    const terrainZ = surfaceMax === null ? null : alignBuildZ(surfaceMax + FOOTPRINT_SURFACE_CLEARANCE);
+    return clampBuildZ(Math.max(explicit ?? planBuildZ(plan), terrainZ ?? RctaiBuilder.DEFAULT_Z));
+  }
+
+  function rideBuildZ(ride: RctaiBuilder.RidePlan, state: RctaiBuilder.JobState, fallbackBuildZ: number): number {
+    return state.anchorBuildZ[ride.id] ?? explicitRideOriginZ(ride) ?? fallbackBuildZ;
+  }
+
+  function anchorBuildZ(id: string, plan: RctaiBuilder.ParkPlan, state: RctaiBuilder.JobState): number {
+    if (id === "entrance") {
+      return state.anchorBuildZ.entrance ?? planBuildZ(plan);
+    }
+    const ride = plan.rides.find((candidate) => candidate.id === id);
+    if (ride === undefined) {
+      return planBuildZ(plan);
+    }
+    return rideBuildZ(ride, state, planBuildZ(plan));
+  }
+
+  function explicitRideOriginZ(ride: RctaiBuilder.RidePlan): number | null {
+    const track = ride.track ?? [];
+    for (const segment of track) {
+      if (segment.z !== undefined) {
+        return segment.z;
+      }
+    }
+    return null;
+  }
+
+  function createPathTileSpecs(
+    path: RctaiBuilder.PathPlan,
+    coords: RctaiBuilder.Coord[],
+    plan: RctaiBuilder.ParkPlan,
+    adapter: RctaiBuilder.BuilderAdapter,
+    state: RctaiBuilder.JobState
+  ): PathTileBuildSpec[] {
+    const profile = pathZProfile(
+      coords,
+      anchorBuildZ(path.from, plan, state),
+      anchorBuildZ(path.to, plan, state),
+      adapter
+    );
+    return coords.map((coord, index) => ({
+      coord,
+      z: profile[index] ?? planBuildZ(plan),
+      ...pathSlopeForTile(coords, profile, index)
+    }));
+  }
+
+  function pathZProfile(
+    coords: RctaiBuilder.Coord[],
+    startZ: number,
+    endZ: number,
+    adapter: RctaiBuilder.BuilderAdapter
+  ): number[] {
+    if (coords.length === 0) {
+      return [];
+    }
+    if (coords.length === 1) {
+      return [clampBuildZ(startZ)];
+    }
+
+    const start = clampBuildZ(startZ);
+    const end = clampBuildZ(endZ);
+    const base = directZProfile(coords.length, start, end);
+    const lastIndex = coords.length - 1;
+    const maxFeasible = coords.map((_coord, index) =>
+      Math.min(start + PATH_HEIGHT_STEP * index, end + PATH_HEIGHT_STEP * (lastIndex - index))
+    );
+    const profile = coords.map((coord, index) => {
+      const terrainZ = surfaceBuildZ(adapter, coord) ?? RctaiBuilder.DEFAULT_Z;
+      const required = Math.max(base[index] ?? start, terrainZ);
+      return clampBuildZ(Math.min(required, maxFeasible[index] ?? required));
+    });
+    profile[0] = start;
+    profile[lastIndex] = end;
+
+    for (let pass = 0; pass < coords.length; pass += 1) {
+      for (let index = 1; index < lastIndex; index += 1) {
+        const needed = (profile[index - 1] ?? start) - PATH_HEIGHT_STEP;
+        if ((profile[index] ?? start) < needed) {
+          profile[index] = Math.min(needed, maxFeasible[index] ?? needed);
+        }
+      }
+      for (let index = lastIndex - 1; index > 0; index -= 1) {
+        const needed = (profile[index + 1] ?? end) - PATH_HEIGHT_STEP;
+        if ((profile[index] ?? end) < needed) {
+          profile[index] = Math.min(needed, maxFeasible[index] ?? needed);
+        }
+      }
+    }
+
+    return profile.map(clampBuildZ);
+  }
+
+  function directZProfile(length: number, start: number, end: number): number[] {
+    const profile = [start];
+    for (let index = 1; index < length; index += 1) {
+      const remainingSteps = length - 1 - index;
+      const previous = profile[index - 1] ?? start;
+      if (previous < end - PATH_HEIGHT_STEP * remainingSteps) {
+        profile.push(previous + PATH_HEIGHT_STEP);
+      } else if (previous > end + PATH_HEIGHT_STEP * remainingSteps) {
+        profile.push(previous - PATH_HEIGHT_STEP);
+      } else {
+        profile.push(previous);
+      }
+    }
+    profile[length - 1] = end;
+    return profile;
+  }
+
+  function pathSlopeForTile(
+    coords: RctaiBuilder.Coord[],
+    profile: number[],
+    index: number
+  ): Pick<PathTileBuildSpec, "slopeType" | "slopeDirection"> {
+    const coord = coords[index];
+    const z = profile[index];
+    const next = coords[index + 1];
+    const nextZ = profile[index + 1];
+    if (coord !== undefined && next !== undefined && nextZ === (z ?? 0) + PATH_HEIGHT_STEP) {
+      return { slopeType: PATH_SLOPED, slopeDirection: directionBetweenTiles(coord, next) };
+    }
+
+    const previous = coords[index - 1];
+    const previousZ = profile[index - 1];
+    if (coord !== undefined && previous !== undefined && previousZ === (z ?? 0) + PATH_HEIGHT_STEP) {
+      return { slopeType: PATH_SLOPED, slopeDirection: directionBetweenTiles(coord, previous) };
+    }
+
+    return { slopeType: PATH_FLAT, slopeDirection: 0 };
+  }
+
+  function directionBetweenTiles(from: RctaiBuilder.Coord, to: RctaiBuilder.Coord): number {
+    return directionFromTileDelta({ x: to.x - from.x, y: to.y - from.y });
+  }
+
+  function surfaceBuildZ(adapter: RctaiBuilder.BuilderAdapter, coord: RctaiBuilder.Coord): number | null {
+    const surfaceZ = adapter.getSurfaceZ(coord.x, coord.y);
+    return surfaceZ === null ? null : alignBuildZ(surfaceZ + FOOTPRINT_SURFACE_CLEARANCE);
+  }
+
+  function maxSurfaceZ(adapter: RctaiBuilder.BuilderAdapter, coords: RctaiBuilder.Coord[]): number | null {
+    let result: number | null = null;
+    for (const coord of coords) {
+      const surfaceZ = adapter.getSurfaceZ(coord.x, coord.y);
+      if (surfaceZ !== null) {
+        result = Math.max(result ?? surfaceZ, surfaceZ);
+      }
+    }
+    return result;
+  }
+
+  function alignBuildZ(value: number): number {
+    return Math.ceil(value / PATH_HEIGHT_STEP) * PATH_HEIGHT_STEP;
+  }
+
+  function clampBuildZ(value: number): number {
+    return Math.max(RctaiBuilder.DEFAULT_Z, Math.min(MAX_BUILD_Z, alignBuildZ(value)));
+  }
+
   function planBuildZ(plan: RctaiBuilder.ParkPlan): number {
-    return plan.park.entrance.z ?? RctaiBuilder.DEFAULT_Z;
+    return clampBuildZ(plan.park.entrance.z ?? RctaiBuilder.DEFAULT_Z);
   }
 
   function trackCursorForSegment(
@@ -768,35 +968,16 @@ namespace RctaiBuilder {
     return result;
   }
 
-  function terrainCoordsForPlan(plan: RctaiBuilder.ParkPlan): RctaiBuilder.Coord[] {
-    const coords = new Set<string>();
-    const add = (x: number, y: number): void => {
-      if (x >= 1 && y >= 1 && x < plan.park.size.width - 1 && y < plan.park.size.height - 1) {
-        coords.add(`${x},${y}`);
-      }
-    };
-
-    add(plan.park.entrance.x, plan.park.entrance.y);
-    for (const ride of plan.rides) {
-      for (let x = ride.position.x - 1; x <= ride.position.x + ride.footprint.w + 1; x += 1) {
-        for (let y = ride.position.y - 1; y <= ride.position.y + ride.footprint.h + 3; y += 1) {
-          add(x, y);
+  function rideTerrainCoords(ride: RctaiBuilder.RidePlan, plan: RctaiBuilder.ParkPlan): RctaiBuilder.Coord[] {
+    const coords: RctaiBuilder.Coord[] = [];
+    for (let x = ride.position.x - 1; x <= ride.position.x + ride.footprint.w + 1; x += 1) {
+      for (let y = ride.position.y - 1; y <= ride.position.y + ride.footprint.h + 3; y += 1) {
+        if (x >= 1 && y >= 1 && x < plan.park.size.width - 1 && y < plan.park.size.height - 1) {
+          coords.push({ x, y });
         }
       }
     }
-
-    for (const path of plan.paths ?? []) {
-      for (const coord of expandPath(path, plan)) {
-        add(coord.x, coord.y);
-      }
-    }
-
-    return Array.from(coords)
-      .map((key) => {
-        const [x, y] = key.split(",").map(Number);
-        return { x: x ?? 0, y: y ?? 0 };
-      })
-      .sort((left, right) => left.y - right.y || left.x - right.x);
+    return coords;
   }
 
   function sceneryAction(kind: RctaiBuilder.SceneryPlan["kind"]): RctaiBuilder.GameActionName {

@@ -4,6 +4,7 @@ namespace RctaiBuilder {
   export interface JobState {
     rideIds: Record<string, number>;
     rideTypes: Record<string, number>;
+    anchorBuildZ: Record<string, number>;
     trackCursors: Record<string, RctaiBuilder.TrackCursor>;
     pathTiles: Record<string, boolean>;
     failedRideIds: Record<string, boolean>;
@@ -219,7 +220,7 @@ namespace RctaiBuilder {
   }
 
   export function createEmptyJobState(): JobState {
-    return { rideIds: {}, rideTypes: {}, trackCursors: {}, pathTiles: {}, failedRideIds: {} };
+    return { rideIds: {}, rideTypes: {}, anchorBuildZ: {}, trackCursors: {}, pathTiles: {}, failedRideIds: {} };
   }
 
   export function formatGameActionError(result: RctaiBuilder.GameActionResultLike): string {

@@ -58,3 +58,53 @@ test("offline build prepares sandbox and owned land before construction", () => 
     ownership: 32
   });
 });
+
+test("offline build emits sloped paths between different anchor heights", () => {
+  const plan = {
+    schemaVersion: 1,
+    park: {
+      name: "path ramp",
+      size: { width: 64, height: 64 },
+      entrance: { x: 10, y: 10, z: 16, direction: 2 }
+    },
+    rides: [
+      {
+        id: "ride-high",
+        name: "High Ride",
+        archetype: "transport",
+        rideType: "miniature_railway",
+        footprint: { w: 3, h: 3 },
+        position: { x: 16, y: 10 },
+        rotation: 2,
+        track: [{ type: 1, x: 0, y: 0, z: 48, direction: 2 }]
+      }
+    ],
+    paths: [
+      {
+        from: "entrance",
+        to: "ride-high",
+        waypoints: [
+          { x: 10, y: 10 },
+          { x: 11, y: 10 },
+          { x: 12, y: 10 },
+          { x: 13, y: 10 },
+          { x: 14, y: 10 },
+          { x: 15, y: 10 },
+          { x: 16, y: 10 }
+        ]
+      }
+    ],
+    scenery: []
+  };
+
+  const result = RctaiBuilder.runOfflinePlan(plan);
+  const pathPlaces = result.actions.filter((action) => action.action === "footpathplace");
+  const sloped = pathPlaces.filter((action) => action.args.slopeType === 1);
+
+  assert.equal(result.status.failedActions, 0);
+  assert.equal(sloped.length, 2);
+  assert.deepEqual(
+    pathPlaces.map((action) => action.args.z),
+    [16, 16, 16, 16, 16, 32, 48]
+  );
+});

@@ -76,6 +76,10 @@ namespace RctaiBuilder {
       return getOfflineTrackSegment(type);
     }
 
+    getSurfaceZ(): number | null {
+      return null;
+    }
+
     placeRawTrack(args: RctaiBuilder.RawTrackArgs): void {
       this.actions.push({ action: "rawtrack", args: args as unknown as Record<string, unknown> });
     }

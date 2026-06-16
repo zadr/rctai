@@ -167,6 +167,7 @@ namespace RctaiBuilder {
     resolveObject(type: ObjectLookupType, identifier: string): number | null;
     resolvePathObjects(): PathObjects;
     getTrackSegment(type: number): TrackSegmentInfo | null;
+    getSurfaceZ(x: number, y: number): number | null;
     placeRawTrack(args: RawTrackArgs): void;
     getExistingRideIds(): number[];
     savePark(name: string, callback: (result: GameActionResultLike) => void): void;

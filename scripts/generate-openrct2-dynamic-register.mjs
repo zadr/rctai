@@ -111,7 +111,7 @@ const output = {
     name: `${plan.park?.name ?? "register transcripts"} dynamic OpenRCT2`,
     size: { width: PARK_WIDTH, height: PARK_HEIGHT },
     baseScenario: null,
-    entrance: { x: Math.floor(PARK_WIDTH / 2), y: 4, direction: 2, z: BASE_Z }
+    entrance: { x: Math.floor(PARK_WIDTH / 2), y: 4, direction: 2 }
   },
   rides: placed.map(stripLayoutHints),
   paths: buildRidePaths(placed),
@@ -1215,6 +1215,14 @@ function fallbackRelation(ride, index) {
 function stripLayoutHints(ride) {
   const clean = { ...ride };
   delete clean.__layout;
+  if (Array.isArray(clean.track)) {
+    clean.track = clean.track.map((segment) => {
+      const rest = { ...segment };
+      delete rest.z;
+      delete rest.clearanceZ;
+      return rest;
+    });
+  }
   return clean;
 }
 

@@ -105,6 +105,20 @@ namespace RctaiBuilder {
           };
     }
 
+    getSurfaceZ(x: number, y: number): number | null {
+      try {
+        const tile = map.getTile(x, y);
+        for (const element of tile.elements) {
+          if (element.type === "surface") {
+            return element.baseZ;
+          }
+        }
+      } catch {
+        return null;
+      }
+      return null;
+    }
+
     placeRawTrack(args: RctaiBuilder.RawTrackArgs): void {
       const tile = map.getTile(args.x, args.y);
       const element = tile.insertElement(tile.elements.length) as TrackElement;

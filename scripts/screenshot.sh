@@ -380,7 +380,9 @@ else
     cmd+=("$zoom" "$rotation")
   fi
 fi
-cmd+=("${screenshot_options[@]}")
+if ((${#screenshot_options[@]} > 0)); then
+  cmd+=("${screenshot_options[@]}")
+fi
 
 printf 'Running:'
 printf ' %q' "${cmd[@]}"
