@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -101,4 +102,15 @@ test("formats HTTP responses", () => {
   assert.match(response, /^HTTP\/1\.1 200 OK\r\n/);
   assert.match(response, /\r\nContent-Type: application\/json; charset=utf-8\r\n/);
   assert.match(response, /\r\n\r\n\{"ok":true\}$/);
+});
+
+test("formats content-length as UTF-8 bytes", () => {
+  const response = builder.formatHttpResponse({
+    status: 200,
+    body: { error: "Can’t open ride…", ok: false }
+  });
+  const [, rawLength] = response.match(/\r\nContent-Length: (\d+)\r\n/) ?? [];
+  const body = response.slice(response.indexOf("\r\n\r\n") + 4);
+
+  assert.equal(Number(rawLength), Buffer.byteLength(body, "utf8"));
 });

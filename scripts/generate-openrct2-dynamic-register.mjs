@@ -35,7 +35,17 @@ const BOOSTER = 100;
 const BLOCK_BRAKES = 216;
 
 const RIDE_OBJECT_OVERRIDES = {
-  alpine_rc: "openrct2.ride.alpine_coaster"
+  alpine_rc: "openrct2.ride.alpine_coaster",
+  giga_rc: "rct2.ride.intst",
+  hypercoaster: "rct2.ride.arrt2",
+  looping_rc: "rct2.ride.scht1",
+  mini_rc: "rct2.ride.jstar1",
+  miniature_railway: "rct2.ride.nrl",
+  multi_dimension_rc: "rct2.ride.arrx",
+  reverser_rc: "rct2.ride.revcar",
+  spiral_rc: "rct2.ride.spdrcr",
+  suspended_monorail: "rct2.ride.smono",
+  vertical_drop_rc: "rct2.ride.bmvd"
 };
 
 const GENTLE_FLAT_VISUALS = [

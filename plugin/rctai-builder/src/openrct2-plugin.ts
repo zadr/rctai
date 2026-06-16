@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-namespace */
 
 namespace RctaiBuilder {
+  const RIDE_OBJECT_AUTO_SELECT = 65535;
+
   interface OpenRCT2SocketState {
     buffer: string;
   }
 
   export class OpenRCT2Adapter implements RctaiBuilder.BuilderAdapter {
-    private readonly rideObjectCache: Record<number, RctaiBuilder.ResolvedRideObject | null> = {};
+    private readonly rideObjectCache: Record<string, RctaiBuilder.ResolvedRideObject | null> = {};
 
     executeAction(
       action: RctaiBuilder.GameActionName,
@@ -30,9 +32,18 @@ namespace RctaiBuilder {
         return null;
       }
 
-      const cached = this.rideObjectCache[rideTypeId];
+      const cacheKey = rideObjectCacheKey(rideTypeId, preferredObject);
+      const cached = this.rideObjectCache[cacheKey];
       if (cached !== undefined) {
         return cached;
+      }
+
+      if (preferredObject !== null) {
+        const preferred = this.loadRideObject(preferredObject);
+        if (preferred !== null && preferred.rideType.indexOf(rideTypeId) >= 0) {
+          this.log(`[rctai-builder] loaded preferred ride object ${preferredObject} for ride type ${rideTypeId}`);
+          return this.cacheRideObject(cacheKey, rideTypeId, RIDE_OBJECT_AUTO_SELECT);
+        }
       }
 
       const objects = objectManager.getAllObjects("ride");
@@ -45,20 +56,20 @@ namespace RctaiBuilder {
           fallback = object;
         }
         if (preferredObject !== null && objectMatchesIdentifier(object, preferredObject)) {
-          return this.cacheRideObject(rideTypeId, object.index);
+          return this.cacheRideObject(cacheKey, rideTypeId, RIDE_OBJECT_AUTO_SELECT);
         }
       }
 
       if (fallback !== null) {
-        return this.cacheRideObject(rideTypeId, fallback.index);
+        return this.cacheRideObject(cacheKey, rideTypeId, RIDE_OBJECT_AUTO_SELECT);
       }
 
       const loaded = this.loadInstalledRideObject(rideTypeId, preferredObject);
       if (loaded !== null) {
-        return this.cacheRideObject(rideTypeId, loaded.index);
+        return this.cacheRideObject(cacheKey, rideTypeId, RIDE_OBJECT_AUTO_SELECT);
       }
 
-      return this.cacheRideObject(rideTypeId, null);
+      return this.cacheRideObject(cacheKey, rideTypeId, null);
     }
 
     resolveObject(type: RctaiBuilder.ObjectLookupType, identifier: string): number | null {
@@ -132,14 +143,19 @@ namespace RctaiBuilder {
       console.log(message);
     }
 
-    private cacheRideObject(rideTypeId: number, rideObjectIndex: number | null): RctaiBuilder.ResolvedRideObject | null {
+    private cacheRideObject(
+      cacheKey: string,
+      rideTypeId: number,
+      rideObjectIndex: number | null
+    ): RctaiBuilder.ResolvedRideObject | null {
       const resolved = rideObjectIndex === null ? null : { rideTypeId, rideObjectIndex };
-      this.rideObjectCache[rideTypeId] = resolved;
+      this.rideObjectCache[cacheKey] = resolved;
       return resolved;
     }
 
     private loadInstalledRideObject(rideTypeId: number, preferredObject: string | null): RideObject | null {
       const preferred = preferredObject === null ? [] : [preferredObject];
+      const initiallyLoaded = loadedRideObjectIdentifiers();
       const candidates = objectManager.installedObjects
         .filter((object) => object.type === "ride")
         .map((object) => object.identifier)
@@ -155,11 +171,29 @@ namespace RctaiBuilder {
           this.log(`[rctai-builder] loaded ride object ${identifier} for ride type ${rideTypeId}`);
           return loaded;
         }
-        safeUnloadObject(identifier);
+        if (initiallyLoaded[identifier] !== true) {
+          safeUnloadObject(identifier);
+        }
       }
 
       return null;
     }
+
+    private loadRideObject(identifier: string): RideObject | null {
+      const loaded = safeLoadObject(identifier);
+      if (loaded === null) {
+        return null;
+      }
+      if (isRideObject(loaded)) {
+        return loaded;
+      }
+      safeUnloadObject(identifier);
+      return null;
+    }
+  }
+
+  function rideObjectCacheKey(rideTypeId: number, preferredObject: string | null): string {
+    return `${rideTypeId}:${preferredObject ?? "*"}`;
   }
 
   function objectMatchesIdentifier(object: LoadedObject, identifier: string): boolean {
@@ -168,6 +202,14 @@ namespace RctaiBuilder {
 
   function isRideObject(object: LoadedObject): object is RideObject {
     return object.type === "ride" && Array.isArray((object as RideObject).rideType);
+  }
+
+  function loadedRideObjectIdentifiers(): Record<string, boolean> {
+    const identifiers: Record<string, boolean> = {};
+    for (const object of objectManager.getAllObjects("ride")) {
+      identifiers[object.installedObject.identifier] = true;
+    }
+    return identifiers;
   }
 
   function safeLoadObject(identifier: string): LoadedObject | null {

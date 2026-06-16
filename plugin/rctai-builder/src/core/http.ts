@@ -180,7 +180,7 @@ namespace RctaiBuilder {
     const body = JSON.stringify(response.body);
     const headers: Record<string, string> = {
       "Content-Type": "application/json; charset=utf-8",
-      "Content-Length": String(body.length),
+      "Content-Length": String(utf8ByteLength(body)),
       Connection: "close",
       ...(response.headers ?? {})
     };
@@ -233,6 +233,29 @@ namespace RctaiBuilder {
 
   function json(status: number, body: unknown): HttpResponse {
     return { status, body };
+  }
+
+  function utf8ByteLength(input: string): number {
+    let bytes = 0;
+    for (let index = 0; index < input.length; index += 1) {
+      const code = input.charCodeAt(index);
+      if (code < 0x80) {
+        bytes += 1;
+      } else if (code < 0x800) {
+        bytes += 2;
+      } else if (code >= 0xd800 && code <= 0xdbff && index + 1 < input.length) {
+        const next = input.charCodeAt(index + 1);
+        if (next >= 0xdc00 && next <= 0xdfff) {
+          bytes += 4;
+          index += 1;
+        } else {
+          bytes += 3;
+        }
+      } else {
+        bytes += 3;
+      }
+    }
+    return bytes;
   }
 
   function badRequest(error: string): HttpParseResult {

@@ -279,7 +279,7 @@ namespace RctaiBuilder {
       createAppearanceStep(ride, RIDE_APPEARANCE_TRACK_SUPPORTS, ride.colours?.support ?? 0, "supports")
     );
 
-    if (!isRawVisualRide) {
+    if (!isRawVisualRide && shouldAutoOpenRide(ride)) {
       steps.push(
         RctaiBuilder.createGameActionStep(
           `open ride ${ride.id}`,
@@ -298,6 +298,11 @@ namespace RctaiBuilder {
     }
 
     return steps;
+  }
+
+  function shouldAutoOpenRide(ride: RctaiBuilder.RidePlan): boolean {
+    const track = ride.track ?? null;
+    return track === null || track.length <= 1;
   }
 
   function createTrackStep(
