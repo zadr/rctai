@@ -9,6 +9,8 @@
   ],
   "scripts": {
     "validate": "node scripts/validate-fixtures.mjs",
+    "validate:park": "node scripts/validate-park-connectivity.mjs",
+    "validate:register": "node scripts/validate-fixtures.mjs && node scripts/validate-park-connectivity.mjs build/register-transcripts/register-transcripts.openrct2-dynamic.park-plan.json",
     "typecheck": "tsc -p tsconfig.root.json --noEmit && node scripts/run-workspace-script.mjs typecheck",
     "lint": "eslint .",
     "ci": "npm run validate && npm run typecheck && npm run lint"
