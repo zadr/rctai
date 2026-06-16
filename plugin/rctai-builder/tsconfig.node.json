@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false
+  },
+  "include": [
+    "src/node-shim.d.ts",
+    "src/node/rctai-builder-global.d.ts",
+    "src/node/**/*.ts"
+  ]
+}

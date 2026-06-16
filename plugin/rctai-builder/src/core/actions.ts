@@ -1,0 +1,466 @@
+/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-unused-vars */
+
+namespace RctaiBuilder {
+  const RIDE_TYPE_IDS: Record<string, number> = {
+    air_powered_vertical_coaster: 75,
+    alpine_coaster: 98,
+    boat_hire: 8,
+    bobsleigh_coaster: 13,
+    car_ride: 11,
+    cash_machine: 45,
+    chairlift: 18,
+    circus: 49,
+    classic_mini_rc: 95,
+    classic_stand_up_rc: 100,
+    classic_wooden_rc: 99,
+    classic_wooden_twister_rc: 102,
+    compact_inverted_coaster: 73,
+    corkscrew_rc: 19,
+    crooked_house: 71,
+    dinghy_slide: 16,
+    dodgems: 25,
+    drink_stall: 30,
+    enterprise: 81,
+    ferris_wheel: 37,
+    first_aid: 48,
+    flying_rc: 57,
+    flying_saucers: 70,
+    food_stall: 28,
+    ghost_train: 50,
+    giga_coaster: 68,
+    giga_rc: 68,
+    go_karts: 22,
+    haunted_house: 47,
+    heartline_twister_coaster: 66,
+    hybrid_coaster: 96,
+    hyper_twister: 92,
+    hypercoaster: 91,
+    information_kiosk: 35,
+    inverted_hairpin_coaster: 76,
+    inverted_impulse_coaster: 86,
+    inverted_rc: 3,
+    junior_rc: 4,
+    launched_freefall: 12,
+    lay_down_rc: 62,
+    lift: 43,
+    lim_launched_rc: 90,
+    log_flume: 23,
+    looping_rc: 15,
+    lsm_launched_rc: 101,
+    magic_carpet: 77,
+    maze: 20,
+    merry_go_round: 33,
+    mine_ride: 88,
+    mine_train_rc: 17,
+    mini_golf: 67,
+    mini_helicopters: 61,
+    mini_rc: 87,
+    mini_suspended_coaster: 7,
+    miniature_railway: 5,
+    monorail: 6,
+    monorail_cycles: 72,
+    monster_trucks: 93,
+    motion_simulator: 38,
+    multi_dimension_rc: 55,
+    observation_tower: 14,
+    reverse_freefall_rc: 42,
+    reverser_rc: 65,
+    river_rafts: 79,
+    river_rapids: 24,
+    roto_drop: 69,
+    side_friction_rc: 53,
+    single_rail_rc: 97,
+    space_rings: 41,
+    spinning_wild_mouse: 94,
+    spiral_rc: 0,
+    spiral_slide: 21,
+    splash_boats: 60,
+    stand_up_rc: 1,
+    steel_wild_mouse: 54,
+    steeplechase: 10,
+    submarine_ride: 78,
+    suspended_monorail: 63,
+    suspended_swinging_coaster: 2,
+    swinging_inverter_ship: 27,
+    swinging_ship: 26,
+    toilets: 36,
+    top_spin: 40,
+    twist: 46,
+    twister_rc: 51,
+    vertical_drop_rc: 44,
+    virginia_reel: 59,
+    water_coaster: 74,
+    wooden_rc: 52,
+    wooden_wild_mouse: 9
+  };
+
+  const RIDE_APPEARANCE_TRACK_MAIN = 0;
+  const RIDE_APPEARANCE_TRACK_ADDITIONAL = 1;
+  const RIDE_APPEARANCE_TRACK_SUPPORTS = 2;
+
+  export function createBuildSteps(plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
+    const steps: RctaiBuilder.QueuedStep[] = [
+      RctaiBuilder.createGameActionStep("set park name", "parksetname", () => ({ name: plan.park.name }))
+    ];
+
+    for (const ride of plan.rides) {
+      steps.push(...createRideSteps(ride));
+    }
+
+    for (const path of plan.paths ?? []) {
+      steps.push(...createPathSteps(path, plan));
+    }
+
+    for (const scenery of plan.scenery ?? []) {
+      steps.push(createSceneryStep(scenery));
+    }
+
+    return steps;
+  }
+
+  export function createClearSteps(adapter: RctaiBuilder.BuilderAdapter): RctaiBuilder.QueuedStep[] {
+    const steps: RctaiBuilder.QueuedStep[] = [];
+    for (const rideId of adapter.getExistingRideIds()) {
+      steps.push(
+        RctaiBuilder.createGameActionStep(`demolish ride ${rideId}`, "ridedemolish", () => ({
+          ride: rideId,
+          modifyType: 0
+        }))
+      );
+    }
+    steps.push(
+      RctaiBuilder.createGameActionStep("clear paths and scenery", "clearscenery", () => ({
+        itemsToClear: 1 | 2 | 4
+      }))
+    );
+    return steps;
+  }
+
+  export function createSaveStep(name: string): RctaiBuilder.QueuedStep {
+    return RctaiBuilder.createAdapterStep(`save park ${name}`, (adapter, _state, done) => {
+      adapter.savePark(sanitizeSaveName(name), done);
+    });
+  }
+
+  export function resolveRideTypeId(rideType: string): number | null {
+    const normalized = normalizeIdentifier(rideType);
+    return RIDE_TYPE_IDS[normalized] ?? null;
+  }
+
+  export function normalizeIdentifier(value: string): string {
+    return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  }
+
+  export function tileToGame(value: number): number {
+    return value * RctaiBuilder.TILE_UNITS;
+  }
+
+  function createRideSteps(ride: RctaiBuilder.RidePlan): RctaiBuilder.QueuedStep[] {
+    const steps: RctaiBuilder.QueuedStep[] = [];
+
+    steps.push(
+      RctaiBuilder.createGameActionStep(
+        `create ride ${ride.id}`,
+        "ridecreate",
+        (adapter, state) => {
+          const resolved = adapter.resolveRideObject(ride.rideType, ride.rideObject ?? null);
+          if (resolved === null) {
+            adapter.log(`[rctai-builder] no loaded ride object for ${ride.id} (${ride.rideType})`);
+            return null;
+          }
+          state.rideTypes[ride.id] = resolved.rideTypeId;
+          return {
+            rideType: resolved.rideTypeId,
+            rideObject: resolved.rideObjectIndex,
+            entranceObject: 0,
+            colour1: ride.colours?.main ?? 0,
+            colour2: ride.colours?.additional ?? ride.colours?.main ?? 0,
+            inspectionInterval: 2
+          };
+        },
+        (result, state) => {
+          if (typeof result.ride === "number") {
+            state.rideIds[ride.id] = result.ride;
+          }
+        }
+      )
+    );
+
+    const track = ride.track ?? null;
+    if (track !== null && track.length > 0) {
+      for (let index = 0; index < track.length; index += 1) {
+        const segment = track[index];
+        if (segment !== undefined) {
+          steps.push(createTrackStep(ride, segment, index));
+        }
+      }
+    } else {
+      steps.push(createTrackStep(ride, { type: 0 }, 0));
+    }
+
+    steps.push(
+      createEntranceExitStep(ride, false),
+      createEntranceExitStep(ride, true),
+      createNameStep(ride),
+      createAppearanceStep(ride, RIDE_APPEARANCE_TRACK_MAIN, ride.colours?.track ?? ride.colours?.main ?? 0, "track main"),
+      createAppearanceStep(
+        ride,
+        RIDE_APPEARANCE_TRACK_ADDITIONAL,
+        ride.colours?.additional ?? ride.colours?.main ?? 0,
+        "track additional"
+      ),
+      createAppearanceStep(ride, RIDE_APPEARANCE_TRACK_SUPPORTS, ride.colours?.support ?? 0, "supports"),
+      RctaiBuilder.createGameActionStep(`open ride ${ride.id}`, "ridesetstatus", (_adapter, state) => {
+        const rideId = state.rideIds[ride.id];
+        return rideId === undefined ? null : { ride: rideId, status: 1 };
+      })
+    );
+
+    return steps;
+  }
+
+  function createTrackStep(
+    ride: RctaiBuilder.RidePlan,
+    segment: RctaiBuilder.TrackSegmentPlan,
+    index: number
+  ): RctaiBuilder.QueuedStep {
+    return RctaiBuilder.createGameActionStep(`place track ${ride.id} #${index}`, "trackplace", (_adapter, state) => {
+      const rideId = state.rideIds[ride.id];
+      const rideType = state.rideTypes[ride.id] ?? RctaiBuilder.resolveRideTypeId(ride.rideType);
+      if (rideId === undefined || rideType === null) {
+        return null;
+      }
+
+      const width = Math.max(ride.footprint.w, 1);
+      const localX = index % width;
+      const localY = Math.floor(index / width);
+
+      return {
+        x: tileToGame(ride.position.x + localX),
+        y: tileToGame(ride.position.y + localY),
+        z: RctaiBuilder.DEFAULT_Z,
+        direction: normalizeDirection((ride.rotation ?? 0) + index),
+        ride: rideId,
+        trackType: segment.type,
+        rideType,
+        brakeSpeed: segment.brakeSpeed ?? 0,
+        colour: segment.colour ?? ride.colours?.track ?? ride.colours?.main ?? 0,
+        seatRotation: segment.seatRotation ?? 0,
+        trackPlaceFlags: 0,
+        isFromTrackDesign: false
+      };
+    });
+  }
+
+  function createEntranceExitStep(ride: RctaiBuilder.RidePlan, isExit: boolean): RctaiBuilder.QueuedStep {
+    const label = isExit ? "exit" : "entrance";
+    return RctaiBuilder.createGameActionStep(`place ${label} ${ride.id}`, "rideentranceexitplace", (_adapter, state) => {
+      const rideId = state.rideIds[ride.id];
+      if (rideId === undefined) {
+        return null;
+      }
+
+      return {
+        x: tileToGame(ride.position.x + (isExit ? Math.max(ride.footprint.w - 1, 0) : 0)),
+        y: tileToGame(ride.position.y + ride.footprint.h),
+        direction: normalizeDirection(ride.rotation ?? 0),
+        ride: rideId,
+        station: 0,
+        isExit
+      };
+    });
+  }
+
+  function createNameStep(ride: RctaiBuilder.RidePlan): RctaiBuilder.QueuedStep {
+    return RctaiBuilder.createGameActionStep(`name ride ${ride.id}`, "ridesetname", (_adapter, state) => {
+      const rideId = state.rideIds[ride.id];
+      return rideId === undefined
+        ? null
+        : {
+            ride: rideId,
+            name: truncateName(ride.sign ?? ride.name)
+          };
+    });
+  }
+
+  function createAppearanceStep(
+    ride: RctaiBuilder.RidePlan,
+    type: number,
+    value: number,
+    label: string
+  ): RctaiBuilder.QueuedStep {
+    return RctaiBuilder.createGameActionStep(`set ${label} colour ${ride.id}`, "ridesetappearance", (_adapter, state) => {
+      const rideId = state.rideIds[ride.id];
+      return rideId === undefined
+        ? null
+        : {
+            ride: rideId,
+            type,
+            value,
+            index: 0
+          };
+    });
+  }
+
+  function createPathSteps(path: RctaiBuilder.PathPlan, plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
+    const coords = expandPath(path, plan);
+    return coords.map((coord, index) =>
+      RctaiBuilder.createGameActionStep(`place path ${path.from}->${path.to} #${index}`, "footpathplace", (adapter) => {
+        const objects = adapter.resolvePathObjects();
+        return {
+          x: tileToGame(coord.x),
+          y: tileToGame(coord.y),
+          z: RctaiBuilder.DEFAULT_Z,
+          direction: 255,
+          object: objects.surfaceObject,
+          railingsObject: objects.railingsObject,
+          slopeType: 0,
+          slopeDirection: 0,
+          constructFlags: 0
+        };
+      })
+    );
+  }
+
+  function createSceneryStep(scenery: RctaiBuilder.SceneryPlan): RctaiBuilder.QueuedStep {
+    const kind = scenery.kind ?? "small";
+    const action = sceneryAction(kind);
+    return RctaiBuilder.createGameActionStep(`place ${kind} scenery ${scenery.object}`, action, (adapter) => {
+      const object = adapter.resolveObject(sceneryObjectType(kind), scenery.object);
+      if (object === null) {
+        adapter.log(`[rctai-builder] no loaded scenery object for ${scenery.object}`);
+        return null;
+      }
+
+      const baseArgs = {
+        x: tileToGame(scenery.position.x),
+        y: tileToGame(scenery.position.y),
+        z: RctaiBuilder.DEFAULT_Z,
+        object
+      };
+
+      if (kind === "footpath_addition") {
+        return baseArgs;
+      }
+
+      if (kind === "wall") {
+        return {
+          ...baseArgs,
+          edge: 0,
+          primaryColour: 0,
+          secondaryColour: 0,
+          tertiaryColour: 0
+        };
+      }
+
+      if (kind === "large") {
+        return {
+          ...baseArgs,
+          direction: 0,
+          primaryColour: 0,
+          secondaryColour: 0,
+          tertiaryColour: 0
+        };
+      }
+
+      return {
+        ...baseArgs,
+        direction: 0,
+        quadrant: 0,
+        primaryColour: 0,
+        secondaryColour: 0,
+        tertiaryColour: 0
+      };
+    });
+  }
+
+  function expandPath(path: RctaiBuilder.PathPlan, plan: RctaiBuilder.ParkPlan): RctaiBuilder.Coord[] {
+    if (path.waypoints !== undefined && path.waypoints.length > 0) {
+      return path.waypoints;
+    }
+
+    const start = endpointFor(path.from, plan);
+    const end = endpointFor(path.to, plan);
+    if (start === null || end === null) {
+      return [];
+    }
+
+    const coords: RctaiBuilder.Coord[] = [];
+    const stepX = start.x <= end.x ? 1 : -1;
+    for (let x = start.x; x !== end.x; x += stepX) {
+      coords.push({ x, y: start.y });
+    }
+
+    const stepY = start.y <= end.y ? 1 : -1;
+    for (let y = start.y; y !== end.y; y += stepY) {
+      coords.push({ x: end.x, y });
+    }
+    coords.push(end);
+    return dedupeCoords(coords);
+  }
+
+  function endpointFor(id: string, plan: RctaiBuilder.ParkPlan): RctaiBuilder.Coord | null {
+    if (id === "entrance") {
+      return { x: plan.park.entrance.x, y: plan.park.entrance.y };
+    }
+    const ride = plan.rides.find((candidate) => candidate.id === id);
+    if (ride === undefined) {
+      return null;
+    }
+    return {
+      x: ride.position.x + Math.floor(ride.footprint.w / 2),
+      y: ride.position.y + ride.footprint.h
+    };
+  }
+
+  function dedupeCoords(coords: RctaiBuilder.Coord[]): RctaiBuilder.Coord[] {
+    const result: RctaiBuilder.Coord[] = [];
+    let previous: RctaiBuilder.Coord | null = null;
+    for (const coord of coords) {
+      if (previous === null || previous.x !== coord.x || previous.y !== coord.y) {
+        result.push(coord);
+        previous = coord;
+      }
+    }
+    return result;
+  }
+
+  function sceneryAction(kind: RctaiBuilder.SceneryPlan["kind"]): RctaiBuilder.GameActionName {
+    if (kind === "large") {
+      return "largesceneryplace";
+    }
+    if (kind === "wall") {
+      return "wallplace";
+    }
+    if (kind === "footpath_addition") {
+      return "footpathadditionplace";
+    }
+    return "smallsceneryplace";
+  }
+
+  function sceneryObjectType(kind: RctaiBuilder.SceneryPlan["kind"]): RctaiBuilder.ObjectLookupType {
+    if (kind === "large") {
+      return "large_scenery";
+    }
+    if (kind === "wall") {
+      return "wall";
+    }
+    if (kind === "footpath_addition") {
+      return "footpath_addition";
+    }
+    return "small_scenery";
+  }
+
+  function truncateName(name: string): string {
+    return name.length > 32 ? name.slice(0, 32) : name;
+  }
+
+  function normalizeDirection(value: number): number {
+    return ((value % 4) + 4) % 4;
+  }
+
+  function sanitizeSaveName(name: string): string {
+    const trimmed = name.trim().replace(/[^A-Za-z0-9._ -]+/g, "_");
+    return trimmed.length === 0 ? "rctai-park" : trimmed;
+  }
+}

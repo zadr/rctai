@@ -1,0 +1,16 @@
+{
+  "name": "@rctai/rctai-builder",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenRCT2 builder plugin and protocol harness for RCTAI park plans.",
+  "bin": {
+    "rctai-builder-offline": "./dist/node/offline.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.plugin.json && tsc -p tsconfig.node.json",
+    "typecheck": "tsc -p tsconfig.plugin.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs; status=$?; rm -rf dist; exit $status",
+    "offline": "npm run build && node dist/node/offline.js"
+  }
+}

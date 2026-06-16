@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "none",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "outFile": "dist/rctai-builder.js"
+  },
+  "files": [
+    "src/openrct2-globals.d.ts",
+    "src/core/types.ts",
+    "src/core/validation.ts",
+    "src/core/http.ts",
+    "src/core/queue.ts",
+    "src/core/actions.ts",
+    "src/core/offline.ts",
+    "src/openrct2-plugin.ts"
+  ]
+}

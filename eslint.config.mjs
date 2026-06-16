@@ -5,7 +5,7 @@ export default [
   {
     ignores: [
       "node_modules/**",
-      "dist/**",
+      "**/dist/**",
       "coverage/**",
       "preview.*",
       "OpenRCT2/**",
