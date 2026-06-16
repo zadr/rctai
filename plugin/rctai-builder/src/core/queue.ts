@@ -4,6 +4,7 @@ namespace RctaiBuilder {
   export interface JobState {
     rideIds: Record<string, number>;
     rideTypes: Record<string, number>;
+    trackCursors: Record<string, RctaiBuilder.TrackCursor>;
   }
 
   export interface QueuedStep {
@@ -40,7 +41,7 @@ namespace RctaiBuilder {
         id,
         label: `build ${plan.park.name}`,
         steps: RctaiBuilder.createBuildSteps(plan),
-        state: { rideIds: {}, rideTypes: {} },
+        state: { rideIds: {}, rideTypes: {}, trackCursors: {} },
         cursor: 0
       });
       return id;
@@ -52,7 +53,7 @@ namespace RctaiBuilder {
         id,
         label: "clear park",
         steps: RctaiBuilder.createClearSteps(this.adapter),
-        state: { rideIds: {}, rideTypes: {} },
+        state: { rideIds: {}, rideTypes: {}, trackCursors: {} },
         cursor: 0
       });
       return id;
@@ -64,7 +65,7 @@ namespace RctaiBuilder {
         id,
         label: `save ${name}`,
         steps: [RctaiBuilder.createSaveStep(name)],
-        state: { rideIds: {}, rideTypes: {} },
+        state: { rideIds: {}, rideTypes: {}, trackCursors: {} },
         cursor: 0
       });
       return id;

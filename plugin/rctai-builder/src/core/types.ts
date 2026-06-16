@@ -69,6 +69,15 @@ namespace RctaiBuilder {
     brakeSpeed?: number;
     seatRotation?: number;
     colour?: number;
+    chainLift?: boolean;
+    inverted?: boolean;
+    x?: number;
+    y?: number;
+    z?: number;
+    clearanceZ?: number;
+    direction?: number;
+    sequence?: number | null;
+    raw?: boolean;
   }
 
   export interface PathPlan {
@@ -94,8 +103,10 @@ namespace RctaiBuilder {
     | "clearscenery"
     | "footpathadditionplace"
     | "footpathplace"
+    | "landsetheight"
     | "landsetrights"
     | "largesceneryplace"
+    | "mapchangesize"
     | "parksetname"
     | "ridedemolish"
     | "ridecreate"
@@ -130,6 +141,22 @@ namespace RctaiBuilder {
     railingsObject: number;
   }
 
+  export interface TrackCursor {
+    x: number;
+    y: number;
+    z: number;
+    direction: number;
+  }
+
+  export interface TrackSegmentInfo {
+    beginZ: number;
+    endZ: number;
+    endX: number;
+    endY: number;
+    beginDirection: number;
+    endDirection: number;
+  }
+
   export interface BuilderAdapter {
     executeAction(
       action: GameActionName,
@@ -139,9 +166,27 @@ namespace RctaiBuilder {
     resolveRideObject(rideType: string, preferredObject: string | null): ResolvedRideObject | null;
     resolveObject(type: ObjectLookupType, identifier: string): number | null;
     resolvePathObjects(): PathObjects;
+    getTrackSegment(type: number): TrackSegmentInfo | null;
+    placeRawTrack(args: RawTrackArgs): void;
     getExistingRideIds(): number[];
     savePark(name: string, callback: (result: GameActionResultLike) => void): void;
     log(message: string): void;
+  }
+
+  export interface RawTrackArgs {
+    x: number;
+    y: number;
+    z: number;
+    clearanceZ: number;
+    direction: number;
+    ride: number;
+    rideType: number;
+    trackType: number;
+    sequence: number | null;
+    station: number | null;
+    brakeBoosterSpeed: number | null;
+    colourScheme: number | null;
+    seatRotation: number | null;
   }
 
   export type ObjectLookupType = "small_scenery" | "large_scenery" | "wall" | "footpath_addition";
