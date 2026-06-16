@@ -2,6 +2,7 @@ import { deepEqual, equal, ok } from "node:assert/strict";
 import { test } from "node:test";
 import { classifyWorkModel } from "../src/classifier.js";
 import { findRepoRoot, loadAndValidateWorkModel, loadRideProfiles } from "../src/io.js";
+import type { PullRequestWork, WorkCategory, WorkModel } from "../src/types.js";
 
 const repoRoot = findRepoRoot();
 const workModel = loadAndValidateWorkModel(`${repoRoot}/fixtures/sample.work-model.json`, repoRoot);
@@ -57,3 +58,83 @@ test("matches the sample classification expectations", () => {
   equal(pr105.archetype, "stall");
   equal(pr105.rideType, "cash_machine");
 });
+
+test("normalizes large batches across the ride distribution", () => {
+  const distributionModel = workModelWithPrs(
+    Array.from({ length: 32 }, (_, index) =>
+      makePr(index, {
+        feature: 1
+      })
+    )
+  );
+  const rides = classifyWorkModel(distributionModel, { rideProfiles });
+  const families = new Set(rides.map((ride) => ride.family));
+
+  ok(families.has("gentle"), "lowest-ranked feature work should not all become coasters");
+  ok(families.has("coaster:compact"));
+  ok(families.has("coaster:mid"));
+  ok(families.has("coaster:mega"));
+  ok(families.size >= 4);
+});
+
+test("maps the most low-code work in a large batch to stalls by relative distribution", () => {
+  const prs = [
+    ...Array.from({ length: 18 }, (_, index) =>
+      makePr(index, {
+        feature: 1
+      })
+    ),
+    makePr(18, {
+      feature: 0.5,
+      chore: 0.5
+    }),
+    makePr(19, {
+      feature: 0.5,
+      docs: 0.5
+    })
+  ];
+  const ridesById = Object.fromEntries(classifyWorkModel(workModelWithPrs(prs), { rideProfiles }).map((ride) => [ride.id, ride]));
+
+  equal(ridesById["DIST-018"]?.family, "stall");
+  equal(ridesById["DIST-019"]?.family, "stall");
+});
+
+function workModelWithPrs(prs: PullRequestWork[]): WorkModel {
+  return {
+    schemaVersion: 1,
+    repo: { name: "distribution-fixture" },
+    branch: "main",
+    generatedAt: "2026-06-16T12:00:00Z",
+    prs
+  };
+}
+
+function makePr(index: number, categories: Partial<Record<WorkCategory, number>>): PullRequestWork {
+  return {
+    id: `DIST-${String(index).padStart(3, "0")}`,
+    number: index,
+    title: `Distribution work ${index}`,
+    author: "agent",
+    state: "merged",
+    commits: 2,
+    filesChanged: 4,
+    newFiles: 0,
+    additions: 120,
+    deletions: 80,
+    languages: { typescript: 200 },
+    categories,
+    signals: {
+      touchesTests: true,
+      touchesConfig: false,
+      touchesDocs: categories.docs !== undefined,
+      codeTouchedNoTests: false,
+      hasRevert: false,
+      forcePush: false,
+      netDeletion: false,
+      hotFiles: [],
+      reviewCount: 2,
+      approvals: 1
+    },
+    session: null
+  };
+}

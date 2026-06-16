@@ -1013,6 +1013,9 @@ function shouldRenderAsFlatRide(ride) {
   if (ride.archetype === "gentle_micro" && !isTowerRide(ride)) {
     return true;
   }
+  if (ride.family === "thrill" && !isTowerRide(ride)) {
+    return true;
+  }
   return ride.rideType === "mini_golf";
 }
 

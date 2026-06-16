@@ -52,6 +52,13 @@ export const WEIGHTS = {
       configBuildDominant: 0.55,
       riskyThrill: 0.6,
       towerThrillRisk: 0.85
+    },
+    distribution: {
+      minBatchSize: 8,
+      lowCodeStallMinShare: 0.35,
+      lowCodeStallRank: 0.92,
+      configBuildWaterMinShare: 0.3,
+      configBuildWaterRank: 0.92
     }
   },
   display: {

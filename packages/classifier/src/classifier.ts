@@ -18,17 +18,19 @@ const COASTER_CATEGORY = "rollerCoaster";
 
 export function classifyWorkModel(workModel: WorkModel, options: ClassifierOptions = {}): ClassifiedRide[] {
   const rideProfiles = options.rideProfiles ?? loadRideProfiles();
+  const distributions = workDistributions(workModel.prs);
 
-  return workModel.prs.map((pr) => classifyPullRequest(workModel, pr, rideProfiles));
+  return workModel.prs.map((pr, index) => classifyPullRequest(workModel, pr, rideProfiles, distributions[index]));
 }
 
 export function classifyPullRequest(
   workModel: WorkModel,
   pr: PullRequestWork,
-  rideProfiles: RideProfilesFile
+  rideProfiles: RideProfilesFile,
+  distribution?: WorkDistribution
 ): ClassifiedRide {
-  const axes = computeAxes(pr);
-  const family = selectFamily(pr, axes);
+  const axes = distribution?.axes ?? computeAxes(pr);
+  const family = selectFamily(pr, axes, distribution);
   const profile = selectRideProfile(rideProfiles.rides, family, axes);
   const archetype = archetypeFor(family, profile);
 
@@ -59,6 +61,89 @@ export function classifyPullRequest(
   };
 }
 
+interface WorkDistribution {
+  axes: Axes;
+  isRelative: boolean;
+  lowCodeShare: number;
+  lowCodeRank: number;
+  configBuildShare: number;
+  configBuildRank: number;
+}
+
+function workDistributions(prs: PullRequestWork[]): WorkDistribution[] {
+  const entries = prs.map((pr) => ({
+    pr,
+    axes: computeAxes(pr),
+    lowCodeShare: clamp(categoryValue(pr, "docs") + categoryValue(pr, "chore")),
+    configBuildShare: clamp(categoryValue(pr, "config") + categoryValue(pr, "build"))
+  }));
+  const isRelative = entries.length >= WEIGHTS.selection.distribution.minBatchSize;
+
+  if (!isRelative) {
+    return entries.map((entry) => ({
+      axes: entry.axes,
+      isRelative,
+      lowCodeShare: entry.lowCodeShare,
+      lowCodeRank: entry.lowCodeShare,
+      configBuildShare: entry.configBuildShare,
+      configBuildRank: entry.configBuildShare
+    }));
+  }
+
+  const sizeRanks = percentileRanks(entries, (entry) => entry.axes.size);
+  const adventureRanks = percentileRanks(entries, (entry) => entry.axes.adventure);
+  const riskRanks = percentileRanks(entries, (entry) => entry.axes.risk);
+  const lowCodeRanks = percentileRanks(entries, (entry) => entry.lowCodeShare);
+  const configBuildRanks = percentileRanks(entries, (entry) => entry.configBuildShare);
+
+  return entries.map((entry, index) => ({
+    axes: {
+      size: sizeRanks[index] ?? entry.axes.size,
+      adventure: adventureRanks[index] ?? entry.axes.adventure,
+      risk: riskRanks[index] ?? entry.axes.risk
+    },
+    isRelative,
+    lowCodeShare: entry.lowCodeShare,
+    lowCodeRank: lowCodeRanks[index] ?? entry.lowCodeShare,
+    configBuildShare: entry.configBuildShare,
+    configBuildRank: configBuildRanks[index] ?? entry.configBuildShare
+  }));
+}
+
+function percentileRanks<T extends { pr: PullRequestWork }>(entries: T[], valueFor: (entry: T) => number): number[] {
+  if (entries.length <= 1) {
+    return entries.map(() => 0.5);
+  }
+
+  const sorted = entries
+    .map((entry, index) => ({
+      entry,
+      index,
+      value: clamp(valueFor(entry)),
+      tieBreaker: stableHash(`${entry.pr.id}:${entry.pr.title}`)
+    }))
+    .sort((left, right) => {
+      if (left.value !== right.value) {
+        return left.value - right.value;
+      }
+
+      if (left.tieBreaker !== right.tieBreaker) {
+        return left.tieBreaker - right.tieBreaker;
+      }
+
+      return left.entry.pr.id.localeCompare(right.entry.pr.id);
+    });
+
+  const denominator = entries.length - 1;
+  const ranks: number[] = [];
+
+  sorted.forEach((item, rank) => {
+    ranks[item.index] = rank / denominator;
+  });
+
+  return ranks;
+}
+
 export function computeAxes(pr: PullRequestWork): Axes {
   const churn = pr.additions + pr.deletions;
   const size = clamp(
@@ -82,12 +167,21 @@ export function computeAxes(pr: PullRequestWork): Axes {
   return { size, adventure, risk };
 }
 
-export function selectFamily(pr: PullRequestWork, axes: Axes): RideFamily {
+export function selectFamily(pr: PullRequestWork, axes: Axes, distribution?: WorkDistribution): RideFamily {
   const docs = categoryValue(pr, "docs");
   const chore = categoryValue(pr, "chore");
   const thresholds = WEIGHTS.selection.thresholds;
+  const distributionWeights = WEIGHTS.selection.distribution;
 
   if (docs >= thresholds.docsOrChoreStall || chore >= thresholds.docsOrChoreStall) {
+    return "stall";
+  }
+
+  if (
+    distribution?.isRelative === true &&
+    distribution.lowCodeShare >= distributionWeights.lowCodeStallMinShare &&
+    distribution.lowCodeRank >= distributionWeights.lowCodeStallRank
+  ) {
     return "stall";
   }
 
@@ -99,7 +193,11 @@ export function selectFamily(pr: PullRequestWork, axes: Axes): RideFamily {
     return axes.risk >= thresholds.riskyThrill ? "thrill" : "coaster:compact";
   }
 
-  if (isConfigBuildDominant(pr) && axes.size >= thresholds.waterMinSize && axes.size < thresholds.waterMaxSize) {
+  if (
+    isConfigBuildDominant(pr, distribution) &&
+    axes.size >= thresholds.waterMinSize &&
+    axes.size < thresholds.waterMaxSize
+  ) {
     return "water";
   }
 
@@ -231,7 +329,7 @@ function sessionErrorPressure(pr: PullRequestWork): number {
   return clamp(((session.errors ?? 0) + (session.retries ?? 0)) / Math.max(session.userTurns ?? 0, 1));
 }
 
-function isConfigBuildDominant(pr: PullRequestWork): boolean {
+function isConfigBuildDominant(pr: PullRequestWork, distribution?: WorkDistribution): boolean {
   const configBuild = categoryValue(pr, "config") + categoryValue(pr, "build");
   const featureWork =
     categoryValue(pr, "feature") +
@@ -241,9 +339,14 @@ function isConfigBuildDominant(pr: PullRequestWork): boolean {
   const lowAdventureWork = categoryValue(pr, "docs") + categoryValue(pr, "chore");
 
   return (
-    configBuild >= WEIGHTS.selection.thresholds.configBuildDominant &&
-    configBuild >= featureWork &&
-    configBuild >= lowAdventureWork
+    (configBuild >= WEIGHTS.selection.thresholds.configBuildDominant &&
+      configBuild >= featureWork &&
+      configBuild >= lowAdventureWork) ||
+    (distribution?.isRelative === true &&
+      distribution.configBuildShare >= WEIGHTS.selection.distribution.configBuildWaterMinShare &&
+      distribution.configBuildRank >= WEIGHTS.selection.distribution.configBuildWaterRank &&
+      configBuild >= lowAdventureWork &&
+      configBuild >= featureWork * 0.6)
   );
 }
 
