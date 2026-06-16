@@ -5,12 +5,16 @@ namespace RctaiBuilder {
     rideIds: Record<string, number>;
     rideTypes: Record<string, number>;
     trackCursors: Record<string, RctaiBuilder.TrackCursor>;
+    pathTiles: Record<string, boolean>;
+    failedRideIds: Record<string, boolean>;
   }
 
   export interface QueuedStep {
     description: string;
     run(adapter: RctaiBuilder.BuilderAdapter, state: JobState, done: (result: RctaiBuilder.GameActionResultLike) => void): void;
     onSuccess?: (result: RctaiBuilder.GameActionResultLike, state: JobState) => void;
+    critical?: boolean;
+    rideId?: string;
   }
 
   interface BuildJob {
@@ -30,6 +34,8 @@ namespace RctaiBuilder {
     private nextJobNumber = 1;
     private completedJobs = 0;
     private failedActions = 0;
+    private criticalFailedActions = 0;
+    private readonly failedActionDescriptions: string[] = [];
 
     constructor(adapter: RctaiBuilder.BuilderAdapter) {
       this.adapter = adapter;
@@ -41,7 +47,7 @@ namespace RctaiBuilder {
         id,
         label: `build ${plan.park.name}`,
         steps: RctaiBuilder.createBuildSteps(plan),
-        state: { rideIds: {}, rideTypes: {}, trackCursors: {} },
+        state: RctaiBuilder.createEmptyJobState(),
         cursor: 0
       });
       return id;
@@ -53,7 +59,7 @@ namespace RctaiBuilder {
         id,
         label: "clear park",
         steps: RctaiBuilder.createClearSteps(this.adapter),
-        state: { rideIds: {}, rideTypes: {}, trackCursors: {} },
+        state: RctaiBuilder.createEmptyJobState(),
         cursor: 0
       });
       return id;
@@ -65,7 +71,7 @@ namespace RctaiBuilder {
         id,
         label: `save ${name}`,
         steps: [RctaiBuilder.createSaveStep(name)],
-        state: { rideIds: {}, rideTypes: {}, trackCursors: {} },
+        state: RctaiBuilder.createEmptyJobState(),
         cursor: 0
       });
       return id;
@@ -116,7 +122,9 @@ namespace RctaiBuilder {
         activeStep: this.pendingStep?.description ?? null,
         pendingAction: this.pending,
         completedJobs: this.completedJobs,
-        failedActions: this.failedActions
+        failedActions: this.failedActions,
+        criticalFailedActions: this.criticalFailedActions,
+        failedActionDescriptions: this.failedActionDescriptions.slice(-25)
       };
     }
 
@@ -134,6 +142,13 @@ namespace RctaiBuilder {
 
       if (result.error !== undefined && result.error !== 0) {
         this.failedActions += 1;
+        this.failedActionDescriptions.push(`${step.description}: ${RctaiBuilder.formatGameActionError(result)}`);
+        if (step.critical === true) {
+          this.criticalFailedActions += 1;
+        }
+        if (step.rideId !== undefined) {
+          active.state.failedRideIds[step.rideId] = true;
+        }
         this.adapter.log(
           `[rctai-builder] action failed; skipping: ${step.description}: ${RctaiBuilder.formatGameActionError(result)}`
         );
@@ -157,7 +172,8 @@ namespace RctaiBuilder {
     description: string,
     action: RctaiBuilder.GameActionName,
     argsFactory: (adapter: RctaiBuilder.BuilderAdapter, state: JobState) => Record<string, unknown> | null,
-    onSuccess?: (result: RctaiBuilder.GameActionResultLike, state: JobState) => void
+    onSuccess?: (result: RctaiBuilder.GameActionResultLike, state: JobState) => void,
+    options?: { critical?: boolean; rideId?: string }
   ): QueuedStep {
     const step: QueuedStep = {
       description,
@@ -174,6 +190,12 @@ namespace RctaiBuilder {
     if (onSuccess !== undefined) {
       step.onSuccess = onSuccess;
     }
+    if (options?.critical !== undefined) {
+      step.critical = options.critical;
+    }
+    if (options?.rideId !== undefined) {
+      step.rideId = options.rideId;
+    }
     return step;
   }
 
@@ -183,9 +205,21 @@ namespace RctaiBuilder {
       adapter: RctaiBuilder.BuilderAdapter,
       state: JobState,
       done: (result: RctaiBuilder.GameActionResultLike) => void
-    ) => void
+    ) => void,
+    options?: { critical?: boolean; rideId?: string }
   ): QueuedStep {
-    return { description, run };
+    const step: QueuedStep = { description, run };
+    if (options?.critical !== undefined) {
+      step.critical = options.critical;
+    }
+    if (options?.rideId !== undefined) {
+      step.rideId = options.rideId;
+    }
+    return step;
+  }
+
+  export function createEmptyJobState(): JobState {
+    return { rideIds: {}, rideTypes: {}, trackCursors: {}, pathTiles: {}, failedRideIds: {} };
   }
 
   export function formatGameActionError(result: RctaiBuilder.GameActionResultLike): string {

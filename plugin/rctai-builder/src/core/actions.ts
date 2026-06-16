@@ -245,7 +245,8 @@ namespace RctaiBuilder {
           if (typeof result.ride === "number") {
             state.rideIds[ride.id] = result.ride;
           }
-        }
+        },
+        { critical: true, rideId: ride.id }
       )
     );
 
@@ -280,10 +281,19 @@ namespace RctaiBuilder {
 
     if (!isRawVisualRide) {
       steps.push(
-      RctaiBuilder.createGameActionStep(`open ride ${ride.id}`, "ridesetstatus", (_adapter, state) => {
-        const rideId = state.rideIds[ride.id];
-        return rideId === undefined ? null : { ride: rideId, status: 1 };
-      })
+        RctaiBuilder.createGameActionStep(
+          `open ride ${ride.id}`,
+          "ridesetstatus",
+          (_adapter, state) => {
+            if (state.failedRideIds[ride.id] === true) {
+              return null;
+            }
+            const rideId = state.rideIds[ride.id];
+            return rideId === undefined ? null : { ride: rideId, status: 1 };
+          },
+          undefined,
+          { critical: true, rideId: ride.id }
+        )
       );
     }
 
@@ -301,6 +311,12 @@ namespace RctaiBuilder {
     }
 
     return RctaiBuilder.createAdapterStep(`place track ${ride.id} #${index}`, (adapter, state, done) => {
+      if (state.failedRideIds[ride.id] === true) {
+        adapter.log(`[rctai-builder] skipped failed ride: place track ${ride.id} #${index}`);
+        done({});
+        return;
+      }
+
       const rideId = state.rideIds[ride.id];
       const rideType = state.rideTypes[ride.id] ?? RctaiBuilder.resolveRideTypeId(ride.rideType);
       if (rideId === undefined || rideType === null) {
@@ -328,10 +344,12 @@ namespace RctaiBuilder {
         trackPlaceFlags: trackPlaceFlagsForSegment(segment),
         isFromTrackDesign: true
       }, (result) => {
-        state.trackCursors[ride.id] = nextCursor;
+        if (result.error === undefined || result.error === 0) {
+          state.trackCursors[ride.id] = nextCursor;
+        }
         done(result);
       });
-    });
+    }, { critical: true, rideId: ride.id });
   }
 
   function createRawTrackStep(
@@ -341,6 +359,11 @@ namespace RctaiBuilder {
     buildZ: number
   ): RctaiBuilder.QueuedStep {
     return RctaiBuilder.createAdapterStep(`insert raw track ${ride.id} #${index}`, (adapter, state, done) => {
+      if (state.failedRideIds[ride.id] === true) {
+        done({});
+        return;
+      }
+
       const rideId = state.rideIds[ride.id];
       const rideType = state.rideTypes[ride.id] ?? RctaiBuilder.resolveRideTypeId(ride.rideType);
       if (rideId === undefined || rideType === null) {
@@ -375,6 +398,9 @@ namespace RctaiBuilder {
   function createEntranceExitStep(ride: RctaiBuilder.RidePlan, isExit: boolean, buildZ: number): RctaiBuilder.QueuedStep {
     const label = isExit ? "exit" : "entrance";
     return RctaiBuilder.createGameActionStep(`place ${label} ${ride.id}`, "rideentranceexitplace", (_adapter, state) => {
+      if (state.failedRideIds[ride.id] === true) {
+        return null;
+      }
       const rideId = state.rideIds[ride.id];
       if (rideId === undefined) {
         return null;
@@ -390,7 +416,7 @@ namespace RctaiBuilder {
         station: 0,
         isExit
       };
-    });
+    }, undefined, { critical: true, rideId: ride.id });
   }
 
   function createNameStep(ride: RctaiBuilder.RidePlan): RctaiBuilder.QueuedStep {
@@ -400,7 +426,7 @@ namespace RctaiBuilder {
         ? null
         : {
             ride: rideId,
-            name: truncateName(ride.sign ?? ride.name)
+            name: truncateName(`${ride.id} ${ride.sign ?? ride.name}`)
           };
     });
   }
@@ -427,7 +453,12 @@ namespace RctaiBuilder {
   function createPathSteps(path: RctaiBuilder.PathPlan, plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
     const coords = expandPath(path, plan);
     return coords.map((coord, index) =>
-      RctaiBuilder.createGameActionStep(`place path ${path.from}->${path.to} #${index}`, "footpathplace", (adapter) => {
+      RctaiBuilder.createGameActionStep(`place path ${path.from}->${path.to} #${index}`, "footpathplace", (adapter, state) => {
+        const key = `${coord.x},${coord.y}`;
+        if (state.pathTiles[key] === true) {
+          return null;
+        }
+        state.pathTiles[key] = true;
         const objects = adapter.resolvePathObjects();
         return {
           x: tileToGame(coord.x),
@@ -440,7 +471,7 @@ namespace RctaiBuilder {
           slopeDirection: 0,
           constructFlags: 0
         };
-      })
+      }, undefined, { critical: true })
     );
   }
 
@@ -674,10 +705,11 @@ namespace RctaiBuilder {
     const direction = normalizeDirection(station.direction ?? stationOrigin?.direction ?? ride.rotation ?? 0);
     const stationStep = directionTileDelta(direction);
     const side = stationSideOffset(direction, isExit);
+    const sideDirection = directionFromTileDelta(side);
     const offset: RctaiBuilder.CoordD = {
       x: (station.x ?? (stationOrigin?.x ?? 0) + stationStep.x * stationIndex) + side.x,
       y: (station.y ?? (stationOrigin?.y ?? 0) + stationStep.y * stationIndex) + side.y,
-      direction
+      direction: normalizeDirection(sideDirection + 2)
     };
     if (station.z !== undefined) {
       offset.z = station.z;
@@ -701,6 +733,22 @@ namespace RctaiBuilder {
   function directionTileDelta(direction: number): RctaiBuilder.Coord {
     const delta = directionDelta(direction);
     return { x: delta.x / RctaiBuilder.TILE_UNITS, y: delta.y / RctaiBuilder.TILE_UNITS };
+  }
+
+  function directionFromTileDelta(delta: RctaiBuilder.Coord): number {
+    if (delta.x < 0) {
+      return 0;
+    }
+    if (delta.y > 0) {
+      return 1;
+    }
+    if (delta.x > 0) {
+      return 2;
+    }
+    if (delta.y < 0) {
+      return 3;
+    }
+    return 0;
   }
 
   function dedupeCoords(coords: RctaiBuilder.Coord[]): RctaiBuilder.Coord[] {

@@ -38,10 +38,18 @@ test("offline build prepares sandbox and owned land before construction", () => 
 
   assert.equal(result.actions[0]?.action, "cheatset");
   assert.deepEqual(result.actions[0]?.args, { type: 0, param1: 1, param2: 0 });
-  assert.equal(result.actions[1]?.action, "cheatset");
-  assert.deepEqual(result.actions[1]?.args, { type: 17, param1: 10_000_000, param2: 0 });
-  assert.equal(result.actions[2]?.action, "landsetrights");
-  assert.deepEqual(result.actions[2]?.args, {
+  assert.ok(
+    result.actions.some(
+      (action) =>
+        action.action === "cheatset" &&
+        action.args.type === 17 &&
+        action.args.param1 === 10_000_000 &&
+        action.args.param2 === 0
+    )
+  );
+
+  const landRights = result.actions.find((action) => action.action === "landsetrights");
+  assert.deepEqual(landRights?.args, {
     x1: 0,
     y1: 0,
     x2: (plan.park.size.width - 1) * 32,

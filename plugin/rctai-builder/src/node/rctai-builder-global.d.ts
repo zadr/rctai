@@ -31,6 +31,8 @@ declare namespace RctaiBuilder {
       pendingAction: boolean;
       completedJobs: number;
       failedActions: number;
+      criticalFailedActions: number;
+      failedActionDescriptions: string[];
     };
     actions: unknown[];
     logs: string[];
