@@ -1,0 +1,18 @@
+{
+  "name": "@rctai/extractor",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/src/index.js"
+  },
+  "bin": {
+    "rctai-extract": "./dist/src/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "rm -rf .tmp-test && tsc -p tsconfig.json --outDir .tmp-test && node --test .tmp-test/test/*.test.js; status=$?; rm -rf .tmp-test; exit $status",
+    "extract": "rm -rf .tmp-cli && tsc -p tsconfig.json --outDir .tmp-cli && node .tmp-cli/src/cli.js"
+  }
+}
