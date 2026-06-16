@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "outDir": "dist",
+    "declaration": true,
+    "types": []
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "../extractor/src/**/*.ts",
+    "../classifier/src/**/*.ts",
+    "../layout/src/**/*.ts",
+    "../trackgen/src/**/*.ts",
+    "../preview/src/**/*.ts"
+  ],
+  "exclude": [
+    "../extractor/src/*.d.ts",
+    "../classifier/src/*.d.ts",
+    "../layout/src/*.d.ts",
+    "../trackgen/src/*.d.ts",
+    "../preview/src/*.d.ts"
+  ]
+}

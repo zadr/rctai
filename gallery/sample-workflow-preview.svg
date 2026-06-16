@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2090" height="976" viewBox="0 0 2090 976" role="img" aria-labelledby="preview-title preview-desc">
+<title id="preview-title">rctai: register preview</title>
+<desc id="preview-desc">Deterministic isometric preview for rctai: register with 5 rendered rides.</desc>
+<style>
+    .background { fill: #f4f0df; }
+    .park-shadow { fill: #6a6f45; opacity: 0.22; }
+    .park-base { fill: #b9d98c; stroke: #486a32; stroke-width: 2; }
+    .grid-line { stroke: #6f9655; stroke-width: 0.75; opacity: 0.32; vector-effect: non-scaling-stroke; }
+    .grid-major { stroke-width: 1.25; opacity: 0.45; }
+    .path-shadow { fill: none; stroke: #735f35; stroke-width: 11; stroke-linecap: round; stroke-linejoin: round; opacity: 0.25; }
+    .path-main { fill: none; stroke: #d9bf77; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+    .ride-shadow { fill: #2a2a2a; opacity: 0.18; }
+    .ride-base { stroke-width: 2; }
+    .support { stroke-linecap: round; opacity: 0.82; }
+    .track-line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .badge-text, .ride-chip, .legend, .entrance-label { font-family: Inter, Avenir, Helvetica, Arial, sans-serif; }
+    .badge-text { font-size: 11px; font-weight: 700; }
+    .ride-chip { font-size: 10px; font-weight: 700; fill: #17210f; paint-order: stroke; stroke: #f4f0df; stroke-width: 3px; stroke-linejoin: round; }
+    .legend text { fill: #263127; }
+    .legend-title { font-size: 20px; font-weight: 800; }
+    .legend-subtitle { font-size: 12px; fill: #526050; }
+    .legend-sign { font-size: 12px; font-weight: 700; }
+    .legend-meta { font-size: 11px; fill: #526050; }
+    .legend-panel { fill: #fffaf0; stroke: #d3c6a3; stroke-width: 1.25; }
+    .entrance-label { font-size: 11px; font-weight: 800; fill: #263127; }
+  </style>
+<rect class="background" width="2090" height="976"/>
+<g class="park">
+<polygon class="park-shadow" points="856,128 1624,512 856,896 88,512" transform="translate(0 10)"/>
+<polygon class="park-base" points="856,128 1624,512 856,896 88,512"/>
+<line class="grid-line grid-major" x1="856" y1="128" x2="88" y2="512"/>
+<line class="grid-line" x1="888" y1="144" x2="120" y2="528"/>
+<line class="grid-line" x1="920" y1="160" x2="152" y2="544"/>
+<line class="grid-line" x1="952" y1="176" x2="184" y2="560"/>
+<line class="grid-line grid-major" x1="984" y1="192" x2="216" y2="576"/>
+<line class="grid-line" x1="1016" y1="208" x2="248" y2="592"/>
+<line class="grid-line" x1="1048" y1="224" x2="280" y2="608"/>
+<line class="grid-line" x1="1080" y1="240" x2="312" y2="624"/>
+<line class="grid-line grid-major" x1="1112" y1="256" x2="344" y2="640"/>
+<line class="grid-line" x1="1144" y1="272" x2="376" y2="656"/>
+<line class="grid-line" x1="1176" y1="288" x2="408" y2="672"/>
+<line class="grid-line" x1="1208" y1="304" x2="440" y2="688"/>
+<line class="grid-line grid-major" x1="1240" y1="320" x2="472" y2="704"/>
+<line class="grid-line" x1="1272" y1="336" x2="504" y2="720"/>
+<line class="grid-line" x1="1304" y1="352" x2="536" y2="736"/>
+<line class="grid-line" x1="1336" y1="368" x2="568" y2="752"/>
+<line class="grid-line grid-major" x1="1368" y1="384" x2="600" y2="768"/>
+<line class="grid-line" x1="1400" y1="400" x2="632" y2="784"/>
+<line class="grid-line" x1="1432" y1="416" x2="664" y2="800"/>
+<line class="grid-line" x1="1464" y1="432" x2="696" y2="816"/>
+<line class="grid-line grid-major" x1="1496" y1="448" x2="728" y2="832"/>
+<line class="grid-line" x1="1528" y1="464" x2="760" y2="848"/>
+<line class="grid-line" x1="1560" y1="480" x2="792" y2="864"/>
+<line class="grid-line" x1="1592" y1="496" x2="824" y2="880"/>
+<line class="grid-line grid-major" x1="1624" y1="512" x2="856" y2="896"/>
+<line class="grid-line grid-major" x1="856" y1="128" x2="1624" y2="512"/>
+<line class="grid-line" x1="824" y1="144" x2="1592" y2="528"/>
+<line class="grid-line" x1="792" y1="160" x2="1560" y2="544"/>
+<line class="grid-line" x1="760" y1="176" x2="1528" y2="560"/>
+<line class="grid-line grid-major" x1="728" y1="192" x2="1496" y2="576"/>
+<line class="grid-line" x1="696" y1="208" x2="1464" y2="592"/>
+<line class="grid-line" x1="664" y1="224" x2="1432" y2="608"/>
+<line class="grid-line" x1="632" y1="240" x2="1400" y2="624"/>
+<line class="grid-line grid-major" x1="600" y1="256" x2="1368" y2="640"/>
+<line class="grid-line" x1="568" y1="272" x2="1336" y2="656"/>
+<line class="grid-line" x1="536" y1="288" x2="1304" y2="672"/>
+<line class="grid-line" x1="504" y1="304" x2="1272" y2="688"/>
+<line class="grid-line grid-major" x1="472" y1="320" x2="1240" y2="704"/>
+<line class="grid-line" x1="440" y1="336" x2="1208" y2="720"/>
+<line class="grid-line" x1="408" y1="352" x2="1176" y2="736"/>
+<line class="grid-line" x1="376" y1="368" x2="1144" y2="752"/>
+<line class="grid-line grid-major" x1="344" y1="384" x2="1112" y2="768"/>
+<line class="grid-line" x1="312" y1="400" x2="1080" y2="784"/>
+<line class="grid-line" x1="280" y1="416" x2="1048" y2="800"/>
+<line class="grid-line" x1="248" y1="432" x2="1016" y2="816"/>
+<line class="grid-line grid-major" x1="216" y1="448" x2="984" y2="832"/>
+<line class="grid-line" x1="184" y1="464" x2="952" y2="848"/>
+<line class="grid-line" x1="152" y1="480" x2="920" y2="864"/>
+<line class="grid-line" x1="120" y1="496" x2="888" y2="880"/>
+<line class="grid-line grid-major" x1="88" y1="512" x2="856" y2="896"/>
+</g>
+<g class="paths">
+<polyline class="path-shadow" points="1192,328 1232,348 1044,442"/>
+<polyline class="path-main" points="1192,328 1232,348 1044,442"/>
+<polyline class="path-shadow" points="1044,442 1140,394 976,312"/>
+<polyline class="path-main" points="1044,442 1140,394 976,312"/>
+<polyline class="path-shadow" points="976,312 824,236"/>
+<polyline class="path-main" points="976,312 824,236"/>
+<polyline class="path-shadow" points="824,236 728,284 760,300"/>
+<polyline class="path-main" points="824,236 728,284 760,300"/>
+<polyline class="path-shadow" points="824,236 832,240 680,316"/>
+<polyline class="path-main" points="824,236 832,240 680,316"/>
+</g>
+<g class="entrance">
+    <line x1="1183.2" y1="325.2" x2="1183.2" y2="294" stroke="#6c4a2b" stroke-width="5" stroke-linecap="round"/>
+    <line x1="1200.8" y1="330.8" x2="1200.8" y2="294" stroke="#6c4a2b" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 1183.2 294 Q 1192 276 1200.8 294" fill="none" stroke="#c83c32" stroke-width="5" stroke-linecap="round"/>
+    <text class="entrance-label" x="1192" y="271" text-anchor="middle">ENTRANCE</text>
+  </g>
+<g class="rides">
+<g class="ride gentle_micro" id="ride-PR-101">
+<title>PR #101 - Bump deps (alice)
+gentle_micro / spiral_slide
+Axes: size 0.18 / adventure 0.12 / risk 0.10</title>
+<desc>PR-101: Bump deps and fix lint. size 0.18 / adventure 0.12 / risk 0.10.</desc>
+<polygon class="ride-shadow" points="824,224 848,236 824,248 800,236" transform="translate(0 7)"/>
+<polygon class="ride-base" points="824,224 848,236 824,248 800,236" fill="#234f9f" fill-opacity="0.2" stroke="#234f9f"/>
+<g class="gentle-glyph">
+    <ellipse cx="824" cy="231" rx="22" ry="10.56" fill="#ffd866" fill-opacity="0.22" stroke="#ffd866" stroke-width="2"/>
+    <line x1="817.76" y1="224.4" x2="830.24" y2="231.6" stroke="#8f969d" stroke-width="4" stroke-linecap="round"/>
+    <line x1="830.72" y1="225.12" x2="816.8" y2="231.12" stroke="#8f969d" stroke-width="4" stroke-linecap="round"/>
+    <path class="track-line" d="M 840 228 L 837.38 232.64 L 831.19 235.75 L 823.34 236.56 L 816.09 234.95 L 811.44 231.51 L 810.52 227.3 L 813.39 223.53 L 819.01 221.22 L 825.65 220.93 L 831.41 222.61 L 834.74 225.66 L 834.89 229.15 L 832.02 232.06 L 827.16 233.65 L 821.81 233.56 L 817.49 231.95 L 815.32 229.39 L 815.72 226.67 L 818.35 224.57 L 822.27 223.61 L 826.27 223.94 L 829.23 225.35 L 830.43 227.32 L 829.74 229.25 L 827.56 230.59 L 824.71 231.05 L 822.08 230.61 L 820.38 229.53" stroke="#1b1d22" stroke-width="4"/>
+    <circle cx="824" cy="228" r="5" fill="#234f9f" stroke="#1b1d22" stroke-width="1.2"/>
+  </g>
+
+<text class="ride-chip" x="815.36" y="256.32" text-anchor="middle">PR-101</text>
+</g>
+<g class="ride drop_thrill" id="ride-PR-103">
+<title>PR #103 - Hotfix (carol) RISKY
+drop_thrill / launched_freefall
+Axes: size 0.22 / adventure 0.40 / risk 0.88</title>
+<desc>PR-103: Hotfix legacy import. size 0.22 / adventure 0.40 / risk 0.88.</desc>
+<polygon class="ride-shadow" points="760,288 784,300 760,312 736,300" transform="translate(0 7)"/>
+<polygon class="ride-base" points="760,288 784,300 760,312 736,300" fill="#8f5d3a" fill-opacity="0.2" stroke="#8f5d3a"/>
+<g class="drop-glyph">
+    <ellipse cx="760" cy="303" rx="20" ry="8" fill="#8f5d3a" fill-opacity="0.28" stroke="#8f5d3a" stroke-width="2"/>
+    <line class="support" x1="760" y1="300" x2="760" y2="193.2" stroke="#9bd9a8" stroke-width="9"/>
+    <line class="support" x1="760" y1="300" x2="760" y2="193.2" stroke="#1b1d22" stroke-width="4"/>
+    <rect x="743" y="220.51" width="34" height="18" rx="2" fill="#8f5d3a" stroke="#1b1d22" stroke-width="1.5"/>
+    <line x1="747" y1="195.2" x2="773" y2="195.2" stroke="#8f5d3a" stroke-width="5" stroke-linecap="round"/>
+  </g>
+<g class="badge">
+      <rect x="736.42" y="183.04" width="51" height="15" rx="2" fill="#b73535" stroke="#1b1d22" stroke-width="1"/>
+      <text class="badge-text" x="761.92" y="194.04" text-anchor="middle" fill="#fff7ee">RISKY</text>
+    </g>
+<text class="ride-chip" x="751.36" y="320.32" text-anchor="middle">PR-103</text>
+</g>
+<g class="ride stall" id="ride-PR-105">
+<title>PR #105 - Docs (dave)
+stall / information_kiosk
+Axes: size 0.20 / adventure 0.05 / risk 0.05</title>
+<desc>PR-105: Docs update. size 0.20 / adventure 0.05 / risk 0.05.</desc>
+<polygon class="ride-shadow" points="680,312 688,316 680,320 672,316" transform="translate(0 7)"/>
+<polygon class="ride-base" points="680,312 688,316 680,320 672,316" fill="#efe1b0" fill-opacity="0.34" stroke="#efe1b0"/>
+<g class="stall-glyph">
+    <rect x="665" y="291" width="30" height="22" fill="#fff6df" stroke="#1b1d22" stroke-width="1.5"/>
+    <path d="M 661 291 L 680 278 L 699 291 Z" fill="#efe1b0" stroke="#1b1d22" stroke-width="1.3"/>
+    <path d="M 665 298 h 30" stroke="#1b1d22" stroke-width="4" stroke-dasharray="5 4"/>
+    <rect x="676" y="301" width="8" height="12" fill="#1b1d22" opacity="0.75"/>
+  </g>
+
+<text class="ride-chip" x="677.12" y="333.44" text-anchor="middle">PR-105</text>
+</g>
+<g class="ride looping_coaster" id="ride-PR-102">
+<title>PR #102 - Caching layer (bob)
+looping_coaster / corkscrew_rc
+Axes: size 0.74 / adventure 0.80 / risk 0.34</title>
+<desc>PR-102: Caching layer. size 0.74 / adventure 0.80 / risk 0.34.</desc>
+<polygon class="ride-shadow" points="968,280 1040,316 984,344 912,308" transform="translate(0 7)"/>
+<polygon class="ride-base" points="968,280 1040,316 984,344 912,308" fill="#c6935b" fill-opacity="0.2" stroke="#c6935b"/>
+<g class="coaster-glyph">
+    <line class="support" x1="937.44" y1="303.92" x2="937.44" y2="295.92" stroke="#8e2428" stroke-width="3"/>
+<line class="support" x1="972.48" y1="297.92" x2="972.48" y2="241.8" stroke="#8e2428" stroke-width="3"/>
+<line class="support" x1="992.16" y1="311.12" x2="992.16" y2="270.71" stroke="#8e2428" stroke-width="3"/>
+<line class="support" x1="996.64" y1="329.04" x2="996.64" y2="317.04" stroke="#8e2428" stroke-width="3"/>
+    <path class="track-line" d="M 937.44 295.92 C 950.16 282.24 964.24 241.6 972.48 241.8 C 982.4 243.97 956.16 293.28 956.48 302.56 C 953.28 311.92 995.28 261.06 992.16 270.71 C 1005.84 287.67 1001.84 302.12 996.64 317.04" stroke="#8e2428" stroke-width="6" opacity="0.34"/>
+    <path class="track-line" d="M 937.44 295.92 C 950.16 282.24 964.24 241.6 972.48 241.8 C 982.4 243.97 956.16 293.28 956.48 302.56 C 953.28 311.92 995.28 261.06 992.16 270.71 C 1005.84 287.67 1001.84 302.12 996.64 317.04" stroke="#f7f7f2" stroke-width="4"/>
+    <path class="track-line" d="M 937.44 295.92 C 950.16 282.24 964.24 241.6 972.48 241.8 C 982.4 243.97 956.16 293.28 956.48 302.56 C 953.28 311.92 995.28 261.06 992.16 270.71 C 1005.84 287.67 1001.84 302.12 996.64 317.04" stroke="#c6935b" stroke-width="1.5" opacity="0.8"/>
+    <ellipse cx="976.08" cy="270.58" rx="12" ry="18" fill="none" stroke="#f7f7f2" stroke-width="3.5"/>
+    
+  </g>
+
+<text class="ride-chip" x="955.84" y="338.08" text-anchor="middle">PR-102</text>
+</g>
+<g class="ride mega_coaster" id="ride-PR-104">
+<title>PR #104 - Settlement rewrite (bob) SHOWPIECE
+mega_coaster / giga_coaster
+Axes: size 0.97 / adventure 0.86 / risk 0.72</title>
+<desc>PR-104: Settlement engine rewrite. size 0.97 / adventure 0.86 / risk 0.72.</desc>
+<polygon class="ride-shadow" points="1032,392 1144,448 1056,492 944,436" transform="translate(0 7)"/>
+<polygon class="ride-base" points="1032,392 1144,448 1056,492 944,436" fill="#c23b8f" fill-opacity="0.2" stroke="#c23b8f"/>
+<g class="coaster-glyph">
+    <line class="support" x1="983.84" y1="429.52" x2="983.84" y2="421.52" stroke="#1b1d22" stroke-width="3"/>
+<line class="support" x1="1038.72" y1="420" x2="1038.72" y2="355.14" stroke="#1b1d22" stroke-width="3"/>
+<line class="support" x1="1069.28" y1="440.56" x2="1069.28" y2="393.86" stroke="#1b1d22" stroke-width="3"/>
+<line class="support" x1="1076" y1="468.56" x2="1076" y2="456.56" stroke="#1b1d22" stroke-width="3"/>
+    <path class="track-line" d="M 983.84 421.52 C 1003.76 403.58 1025.84 354.86 1038.72 355.14 C 1054.24 357.34 1012.96 424.08 1013.44 434.08 C 1008.32 447.6 1074.24 380.59 1069.28 393.86 C 1090.64 414.13 1084.24 437.72 1076 456.56" stroke="#1b1d22" stroke-width="8" opacity="0.34"/>
+    <path class="track-line" d="M 983.84 421.52 C 1003.76 403.58 1025.84 354.86 1038.72 355.14 C 1054.24 357.34 1012.96 424.08 1013.44 434.08 C 1008.32 447.6 1074.24 380.59 1069.28 393.86 C 1090.64 414.13 1084.24 437.72 1076 456.56" stroke="#2f6f7f" stroke-width="5"/>
+    <path class="track-line" d="M 983.84 421.52 C 1003.76 403.58 1025.84 354.86 1038.72 355.14 C 1054.24 357.34 1012.96 424.08 1013.44 434.08 C 1008.32 447.6 1074.24 380.59 1069.28 393.86 C 1090.64 414.13 1084.24 437.72 1076 456.56" stroke="#c23b8f" stroke-width="1.5" opacity="0.8"/>
+    <ellipse cx="1044.16" cy="397.59" rx="23.25" ry="34.88" fill="none" stroke="#2f6f7f" stroke-width="4.5"/>
+    <ellipse cx="1064.16" cy="419.7" rx="20.93" ry="33.71" fill="none" stroke="#c23b8f" stroke-width="3.5"/>
+  </g>
+<g class="badge">
+      <rect x="1011.54" y="346.48" width="79" height="15" rx="2" fill="#f1c847" stroke="#1b1d22" stroke-width="1"/>
+      <text class="badge-text" x="1051.04" y="357.48" text-anchor="middle" fill="#26210b">SHOWPIECE</text>
+    </g>
+<text class="ride-chip" x="1012.32" y="473.84" text-anchor="middle">PR-104</text>
+</g>
+</g>
+<g class="legend">
+<rect class="legend-panel" x="1682" y="26" width="386" height="924" rx="6"/>
+<text class="legend-title" x="1700" y="62">rctai: register</text>
+<text class="legend-subtitle" x="1700" y="82">96x96 park | 5 rides | axes: size / adventure / risk</text>
+<g class="legend-item">
+<rect x="1700" y="100" width="14" height="14" fill="#234f9f" stroke="#1b1d22" stroke-width="1"/>
+<text class="legend-sign" x="1722" y="110">PR #101 - Bump deps (alice)</text>
+<text class="legend-meta" x="1722" y="128">gentle_micro | spiral_slide</text>
+<text class="legend-meta" x="1722" y="142">size 0.18 / adventure 0.12 / risk 0.10</text>
+</g>
+<g class="legend-item">
+<rect x="1700" y="160" width="14" height="14" fill="#c6935b" stroke="#1b1d22" stroke-width="1"/>
+<text class="legend-sign" x="1722" y="170">PR #102 - Caching layer (bob)</text>
+<text class="legend-meta" x="1722" y="188">looping_coaster | corkscrew_rc</text>
+<text class="legend-meta" x="1722" y="202">size 0.74 / adventure 0.80 / risk 0.34</text>
+</g>
+<g class="legend-item">
+<rect x="1700" y="220" width="14" height="14" fill="#8f5d3a" stroke="#1b1d22" stroke-width="1"/>
+<text class="legend-sign" x="1722" y="230">PR #103 - Hotfix (carol) RISKY</text>
+<text class="legend-meta" x="1722" y="248">drop_thrill | launched_freefall</text>
+<text class="legend-meta" x="1722" y="262">size 0.22 / adventure 0.40 / risk 0.88</text>
+</g>
+<g class="legend-item">
+<rect x="1700" y="280" width="14" height="14" fill="#c23b8f" stroke="#1b1d22" stroke-width="1"/>
+<text class="legend-sign" x="1722" y="290">PR #104 - Settlement rewrite (bob)</text>
+<text class="legend-sign" x="1722" y="304">SHOWPIECE</text>
+<text class="legend-meta" x="1722" y="322">mega_coaster | giga_coaster</text>
+<text class="legend-meta" x="1722" y="336">size 0.97 / adventure 0.86 / risk 0.72</text>
+</g>
+<g class="legend-item">
+<rect x="1700" y="354" width="14" height="14" fill="#efe1b0" stroke="#1b1d22" stroke-width="1"/>
+<text class="legend-sign" x="1722" y="364">PR #105 - Docs (dave)</text>
+<text class="legend-meta" x="1722" y="382">stall | information_kiosk</text>
+<text class="legend-meta" x="1722" y="396">size 0.20 / adventure 0.05 / risk 0.05</text>
+</g>
+</g>
+</svg>
