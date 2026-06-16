@@ -97,9 +97,31 @@ namespace RctaiBuilder {
   const RIDE_APPEARANCE_TRACK_MAIN = 0;
   const RIDE_APPEARANCE_TRACK_ADDITIONAL = 1;
   const RIDE_APPEARANCE_TRACK_SUPPORTS = 2;
+  const CHEAT_SANDBOX_MODE = 0;
+  const CHEAT_SET_MONEY = 17;
+  const LAND_SET_OWNERSHIP = 4;
+  const OWNERSHIP_OWNED = 1 << 5;
 
   export function createBuildSteps(plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
     const steps: RctaiBuilder.QueuedStep[] = [
+      RctaiBuilder.createGameActionStep("enable sandbox mode", "cheatset", () => ({
+        type: CHEAT_SANDBOX_MODE,
+        param1: 1,
+        param2: 0
+      })),
+      RctaiBuilder.createGameActionStep("fund park build", "cheatset", () => ({
+        type: CHEAT_SET_MONEY,
+        param1: 10_000_000,
+        param2: 0
+      })),
+      RctaiBuilder.createGameActionStep("claim plan land", "landsetrights", () => ({
+        x1: 0,
+        y1: 0,
+        x2: tileToGame(Math.max(plan.park.size.width - 1, 0)),
+        y2: tileToGame(Math.max(plan.park.size.height - 1, 0)),
+        setting: LAND_SET_OWNERSHIP,
+        ownership: OWNERSHIP_OWNED
+      })),
       RctaiBuilder.createGameActionStep("set park name", "parksetname", () => ({ name: plan.park.name }))
     ];
 
@@ -173,8 +195,8 @@ namespace RctaiBuilder {
             rideType: resolved.rideTypeId,
             rideObject: resolved.rideObjectIndex,
             entranceObject: 0,
-            colour1: ride.colours?.main ?? 0,
-            colour2: ride.colours?.additional ?? ride.colours?.main ?? 0,
+            colour1: 0,
+            colour2: 0,
             inspectionInterval: 2
           };
         },
@@ -260,9 +282,10 @@ namespace RctaiBuilder {
         return null;
       }
 
+      const exitOffset = entranceExitOffset(ride, isExit);
       return {
-        x: tileToGame(ride.position.x + (isExit ? Math.max(ride.footprint.w - 1, 0) : 0)),
-        y: tileToGame(ride.position.y + ride.footprint.h),
+        x: tileToGame(ride.position.x + exitOffset.x),
+        y: tileToGame(ride.position.y + ride.footprint.h + exitOffset.y),
         direction: normalizeDirection(ride.rotation ?? 0),
         ride: rideId,
         station: 0,
@@ -409,8 +432,18 @@ namespace RctaiBuilder {
     }
     return {
       x: ride.position.x + Math.floor(ride.footprint.w / 2),
-      y: ride.position.y + ride.footprint.h
+      y: ride.position.y + ride.footprint.h + 1
     };
+  }
+
+  function entranceExitOffset(ride: RctaiBuilder.RidePlan, isExit: boolean): RctaiBuilder.Coord {
+    if (!isExit) {
+      return { x: 0, y: 0 };
+    }
+    if (ride.footprint.w <= 1) {
+      return { x: 1, y: 0 };
+    }
+    return { x: Math.max(ride.footprint.w - 1, 0), y: 0 };
   }
 
   function dedupeCoords(coords: RctaiBuilder.Coord[]): RctaiBuilder.Coord[] {

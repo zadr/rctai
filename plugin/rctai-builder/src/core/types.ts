@@ -4,7 +4,7 @@ namespace RctaiBuilder {
   export const VERSION = "0.0.0";
   export const DEFAULT_PORT = 6427;
   export const TILE_UNITS = 32;
-  export const DEFAULT_Z = 14;
+  export const DEFAULT_Z = 16;
 
   export interface Coord {
     x: number;
@@ -90,9 +90,11 @@ namespace RctaiBuilder {
   }
 
   export type GameActionName =
+    | "cheatset"
     | "clearscenery"
     | "footpathadditionplace"
     | "footpathplace"
+    | "landsetrights"
     | "largesceneryplace"
     | "parksetname"
     | "ridedemolish"

@@ -26,6 +26,16 @@ namespace RctaiBuilder {
       this.actions.push({ action, args });
 
       if (action === "ridecreate") {
+        const validationError = validateRideCreateArgs(args);
+        if (validationError !== null) {
+          callback({
+            error: 1,
+            errorTitle: "Invalid ridecreate",
+            errorMessage: validationError
+          });
+          return;
+        }
+
         const ride = this.nextRideId;
         this.nextRideId += 1;
         this.rideIds.push(ride);
@@ -100,5 +110,20 @@ namespace RctaiBuilder {
       hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
     }
     return hash % 128;
+  }
+
+  function validateRideCreateArgs(args: Record<string, unknown>): string | null {
+    const requiredNumbers = ["rideType", "rideObject", "entranceObject", "colour1", "colour2", "inspectionInterval"];
+    for (const key of requiredNumbers) {
+      if (typeof args[key] !== "number") {
+        return `${key} must be a number`;
+      }
+    }
+
+    if (args.colour1 !== 0 || args.colour2 !== 0) {
+      return "ridecreate colour1/colour2 are colour preset indices and must use safe default 0";
+    }
+
+    return null;
   }
 }
