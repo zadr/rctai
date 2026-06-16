@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "repo": { "name": "register", "url": "https://github.com/acme/register", "defaultBranch": "main" },
+  "branch": "main",
+  "generatedAt": "2026-06-16T12:00:00Z",
+  "prs": [
+    {
+      "id": "PR-101", "number": 101, "title": "Bump deps and fix lint", "author": "alice",
+      "state": "merged", "createdAt": "2026-05-01T09:00:00Z", "mergedAt": "2026-05-01T10:30:00Z",
+      "durationHours": 1.5, "commits": 1, "filesChanged": 3, "newFiles": 0, "additions": 22, "deletions": 14,
+      "languages": { "yaml": 18, "json": 18 },
+      "categories": { "chore": 0.6, "build": 0.3, "config": 0.1 },
+      "signals": { "touchesTests": false, "touchesConfig": true, "touchesDocs": false, "codeTouchedNoTests": false,
+        "hasRevert": false, "forcePush": false, "netDeletion": false, "hotFiles": [], "reviewCount": 1, "approvals": 1 },
+      "session": null
+    },
+    {
+      "id": "PR-102", "number": 102, "title": "Add caching layer for account lookups", "author": "bob",
+      "state": "merged", "createdAt": "2026-05-03T09:00:00Z", "mergedAt": "2026-05-05T17:00:00Z",
+      "durationHours": 56.0, "commits": 9, "filesChanged": 21, "newFiles": 6, "additions": 980, "deletions": 130,
+      "languages": { "go": 900, "yaml": 210 },
+      "categories": { "feature": 0.7, "test": 0.2, "config": 0.1 },
+      "signals": { "touchesTests": true, "touchesConfig": true, "touchesDocs": false, "codeTouchedNoTests": false,
+        "hasRevert": false, "forcePush": false, "netDeletion": false, "hotFiles": ["internal/account/store.go"], "reviewCount": 4, "approvals": 2 },
+      "session": { "sessionId": "b6060b94", "durationMinutes": 140, "userTurns": 28, "toolCalls": 190, "edits": 64, "bashCalls": 80, "errors": 7, "retries": 3 }
+    },
+    {
+      "id": "PR-103", "number": 103, "title": "Hotfix: bypass validation in legacy import path", "author": "carol",
+      "state": "merged", "createdAt": "2026-05-06T22:00:00Z", "mergedAt": "2026-05-06T23:10:00Z",
+      "durationHours": 1.2, "commits": 2, "filesChanged": 2, "newFiles": 0, "additions": 18, "deletions": 47,
+      "languages": { "go": 65 },
+      "categories": { "feature": 0.4, "refactor": 0.6 },
+      "signals": { "touchesTests": false, "touchesConfig": false, "touchesDocs": false, "codeTouchedNoTests": true,
+        "hasRevert": false, "forcePush": true, "netDeletion": true, "hotFiles": ["internal/import/legacy.go"], "reviewCount": 0, "approvals": 0 },
+      "session": { "sessionId": "d015f67e", "durationMinutes": 45, "userTurns": 14, "toolCalls": 70, "edits": 22, "bashCalls": 30, "errors": 11, "retries": 6 }
+    },
+    {
+      "id": "PR-104", "number": 104, "title": "Rewrite settlement engine with async pipeline", "author": "bob",
+      "state": "merged", "createdAt": "2026-05-08T09:00:00Z", "mergedAt": "2026-05-12T18:00:00Z",
+      "durationHours": 105.0, "commits": 23, "filesChanged": 64, "newFiles": 18, "additions": 4200, "deletions": 1600,
+      "languages": { "go": 5200, "sql": 400, "yaml": 200 },
+      "categories": { "feature": 0.55, "refactor": 0.25, "perf": 0.1, "test": 0.1 },
+      "signals": { "touchesTests": true, "touchesConfig": true, "touchesDocs": true, "codeTouchedNoTests": false,
+        "hasRevert": true, "forcePush": false, "netDeletion": false, "hotFiles": ["internal/settlement/engine.go", "internal/ledger/post.go"], "reviewCount": 9, "approvals": 3 },
+      "session": { "sessionId": "0ba137b8", "durationMinutes": 320, "userTurns": 61, "toolCalls": 420, "edits": 150, "bashCalls": 170, "errors": 19, "retries": 8 }
+    },
+    {
+      "id": "PR-105", "number": 105, "title": "Update README and architecture docs", "author": "dave",
+      "state": "merged", "createdAt": "2026-05-13T09:00:00Z", "mergedAt": "2026-05-13T11:00:00Z",
+      "durationHours": 2.0, "commits": 2, "filesChanged": 4, "newFiles": 1, "additions": 160, "deletions": 12,
+      "languages": { "markdown": 172 },
+      "categories": { "docs": 1.0 },
+      "signals": { "touchesTests": false, "touchesConfig": false, "touchesDocs": true, "codeTouchedNoTests": false,
+        "hasRevert": false, "forcePush": false, "netDeletion": false, "hotFiles": [], "reviewCount": 1, "approvals": 1 },
+      "session": null
+    }
+  ]
+}

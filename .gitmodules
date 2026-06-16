@@ -1,0 +1,12 @@
+[submodule "OpenRCT2"]
+	path = OpenRCT2
+	url = https://github.com/OpenRCT2/OpenRCT2
+[submodule "objects"]
+	path = objects
+	url = https://github.com/OpenRCT2/objects
+[submodule "OpenScenarios"]
+	path = OpenScenarios
+	url = https://github.com/OpenRCT2/OpenScenarios
+[submodule "OpenRCT2.API"]
+	path = OpenRCT2.API
+	url = https://github.com/OpenRCT2/OpenRCT2.API

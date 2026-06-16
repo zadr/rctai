@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rctai/schemas/park-plan.schema.json",
+  "title": "ParkPlan",
+  "description": "Buildable description of an OpenRCT2 park derived from a WorkModel. Consumed by the builder plugin and the standalone preview renderer.",
+  "type": "object",
+  "required": ["schemaVersion", "park", "rides"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "park": {
+      "type": "object",
+      "required": ["name", "size", "entrance"],
+      "properties": {
+        "name": { "type": "string" },
+        "size": {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 16, "maximum": 1000 },
+            "height": { "type": "integer", "minimum": 16, "maximum": 1000 }
+          }
+        },
+        "baseScenario": { "type": ["string", "null"], "description": "Optional .park template to load before building." },
+        "entrance": { "$ref": "#/definitions/coordD" }
+      }
+    },
+    "rides": { "type": "array", "items": { "$ref": "#/definitions/ride" } },
+    "paths": { "type": "array", "items": { "$ref": "#/definitions/path" } },
+    "scenery": { "type": "array", "items": { "$ref": "#/definitions/scenery" } }
+  },
+  "definitions": {
+    "coord": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": { "x": { "type": "integer" }, "y": { "type": "integer" } }
+    },
+    "coordD": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "integer" }, "y": { "type": "integer" },
+        "z": { "type": "integer" },
+        "direction": { "type": "integer", "minimum": 0, "maximum": 3 }
+      }
+    },
+    "ride": {
+      "type": "object",
+      "required": ["id", "name", "archetype", "rideType", "footprint", "position"],
+      "properties": {
+        "id": { "type": "string", "description": "Matches WorkModel pr.id" },
+        "name": { "type": "string", "description": "In-game ride name (<=32 chars recommended)" },
+        "archetype": {
+          "enum": [
+            "gentle_micro", "drop_thrill", "spinning_compact", "compact_thrill_coaster",
+            "transport", "dark_long", "looping_coaster", "mega_coaster",
+            "water_flume", "stall"
+          ]
+        },
+        "rideType": { "type": "string", "description": "Engine ride-type identifier, e.g. spiral_slide, looping_rc, miniature_railway." },
+        "rideObject": { "type": ["string", "null"], "description": "Object id like rct2.ride.arrt1; plugin resolves to index. Null = pick first available for rideType." },
+        "footprint": {
+          "type": "object",
+          "required": ["w", "h"],
+          "properties": { "w": { "type": "integer" }, "h": { "type": "integer" } }
+        },
+        "position": { "$ref": "#/definitions/coord", "description": "Top-left tile of the ride's bounding box." },
+        "rotation": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "colours": {
+          "type": "object",
+          "properties": {
+            "main": { "type": "integer" }, "additional": { "type": "integer" },
+            "support": { "type": "integer" }, "track": { "type": "integer" }
+          }
+        },
+        "intensity": {
+          "type": "object",
+          "properties": {
+            "excitement": { "type": "number" }, "intensity": { "type": "number" }, "nausea": { "type": "number" }
+          }
+        },
+        "sign": { "type": "string", "description": "Banner / sign text near the ride entrance." },
+        "axes": {
+          "type": "object",
+          "description": "Normalised classifier outputs, kept for debugging + preview tooltips.",
+          "properties": {
+            "size": { "type": "number" }, "adventure": { "type": "number" }, "risk": { "type": "number" }
+          }
+        },
+        "track": {
+          "type": ["array", "null"],
+          "description": "Optional ordered track segments for coasters. Each item references the engine TrackElemType.",
+          "items": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": { "type": "integer", "description": "TrackElemType numeric id" },
+              "brakeSpeed": { "type": "integer" },
+              "seatRotation": { "type": "integer" },
+              "colour": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "path": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "string", "description": "ride id or 'entrance'" },
+        "to": { "type": "string", "description": "ride id or 'entrance'" },
+        "waypoints": { "type": "array", "items": { "$ref": "#/definitions/coord" } }
+      }
+    },
+    "scenery": {
+      "type": "object",
+      "required": ["object", "position"],
+      "properties": {
+        "object": { "type": "string" },
+        "position": { "$ref": "#/definitions/coord" },
+        "kind": { "enum": ["small", "large", "wall", "footpath_addition"] }
+      }
+    }
+  }
+}

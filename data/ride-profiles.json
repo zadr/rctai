@@ -1,0 +1,4944 @@
+{
+  "schemaVersion": 1,
+  "count": 91,
+  "inversionVocab": [
+    "verticalLoop",
+    "halfLoop",
+    "halfLoopMedium",
+    "halfLoopLarge",
+    "largeHalfLoop",
+    "corkscrew",
+    "corkscrewLarge",
+    "barrelRoll",
+    "quarterLoop",
+    "zeroGRoll",
+    "zeroGRollLarge",
+    "diveLoop",
+    "inlineTwist",
+    "flyingHalfLoop"
+  ],
+  "rides": [
+    {
+      "name": "maze",
+      "category": "gentle",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        0,
+        0
+      ],
+      "heights": [
+        6,
+        24,
+        0,
+        1
+      ],
+      "axisProfile": {
+        "size": 0.231,
+        "adventure": 0.18,
+        "risk": 0.2
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "dodgems",
+      "category": "gentle",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        40,
+        20,
+        0
+      ],
+      "heights": [
+        9,
+        48,
+        2,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.237,
+        "adventure": 0.18,
+        "risk": 0.264
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "flying_saucers",
+      "category": "gentle",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        25,
+        0
+      ],
+      "heights": [
+        9,
+        48,
+        2,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.237,
+        "adventure": 0.18,
+        "risk": 0.28
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "circus",
+      "category": "gentle",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        20,
+        10,
+        0
+      ],
+      "heights": [
+        12,
+        128,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.242,
+        "adventure": 0.18,
+        "risk": 0.232
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "merry_go_round",
+      "category": "gentle",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        10,
+        0
+      ],
+      "heights": [
+        12,
+        64,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.242,
+        "adventure": 0.18,
+        "risk": 0.232
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "spiral_slide",
+      "category": "gentle",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        10,
+        0
+      ],
+      "heights": [
+        15,
+        128,
+        0,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.248,
+        "adventure": 0.18,
+        "risk": 0.232
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "crooked_house",
+      "category": "gentle",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        15,
+        8,
+        0
+      ],
+      "heights": [
+        16,
+        96,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.25,
+        "adventure": 0.18,
+        "risk": 0.226
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "ferris_wheel",
+      "category": "gentle",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        60,
+        20,
+        10
+      ],
+      "heights": [
+        16,
+        176,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.25,
+        "adventure": 0.18,
+        "risk": 0.317
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "haunted_house",
+      "category": "gentle",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        20,
+        10,
+        0
+      ],
+      "heights": [
+        16,
+        160,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.25,
+        "adventure": 0.18,
+        "risk": 0.232
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "space_rings",
+      "category": "gentle",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        12,
+        4,
+        4
+      ],
+      "heights": [
+        16,
+        48,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.25,
+        "adventure": 0.18,
+        "risk": 0.234
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "monorail_cycles",
+      "category": "gentle",
+      "trackGroups": [
+        "curve",
+        "curveSmall",
+        "sBend",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        10,
+        10
+      ],
+      "heights": [
+        5,
+        24,
+        8,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.282,
+        "adventure": 0.192,
+        "risk": 0.285
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "mini_golf",
+      "category": "gentle",
+      "trackGroups": [
+        "curveVerySmall",
+        "miniGolfHole",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        7,
+        32,
+        2,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.286,
+        "adventure": 0.192,
+        "risk": 0.349
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "mini_helicopters",
+      "category": "gentle",
+      "trackGroups": [
+        "curveSmall",
+        "curveVerySmall",
+        "slope",
+        "spinningTunnel",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        70,
+        10,
+        10
+      ],
+      "heights": [
+        7,
+        24,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.297,
+        "adventure": 0.194,
+        "risk": 0.285
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "ghost_train",
+      "category": "gentle",
+      "trackGroups": [
+        "brakes",
+        "curveSmall",
+        "curveVerySmall",
+        "slope",
+        "spinningTunnel",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        70,
+        10,
+        10
+      ],
+      "heights": [
+        8,
+        24,
+        6,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.309,
+        "adventure": 0.196,
+        "risk": 0.285
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "car_ride",
+      "category": "gentle",
+      "trackGroups": [
+        "curveSmall",
+        "curveVerySmall",
+        "rapids",
+        "slope",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "spinningTunnel",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        70,
+        10,
+        10
+      ],
+      "heights": [
+        6,
+        24,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.326,
+        "adventure": 0.201,
+        "risk": 0.285
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "monster_trucks",
+      "category": "gentle",
+      "trackGroups": [
+        "curveSmall",
+        "curveVerySmall",
+        "rapids",
+        "slope",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "spinningTunnel",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        70,
+        10,
+        10
+      ],
+      "heights": [
+        18,
+        24,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.349,
+        "adventure": 0.201,
+        "risk": 0.285
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "observation_tower",
+      "category": "gentle",
+      "trackGroups": [
+        "tower"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        80,
+        10,
+        0
+      ],
+      "heights": [
+        255,
+        32,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.411,
+        "adventure": 0.182,
+        "risk": 0.232
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": true,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "virginia_reel",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "curveSmall",
+        "curveVerySmall",
+        "liftHill",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        30,
+        15,
+        25
+      ],
+      "heights": [
+        14,
+        24,
+        6,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.29,
+        "adventure": 0.634,
+        "risk": 0.731
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "mini_suspended_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagSlope",
+        "liftHill",
+        "sBend",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        10,
+        24,
+        24,
+        8
+      ],
+      "axisProfile": {
+        "size": 0.314,
+        "adventure": 0.641,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "reverser_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "brakes",
+        "curve",
+        "curveSmall",
+        "liftHill",
+        "reverser",
+        "sBend",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        48,
+        28,
+        7
+      ],
+      "heights": [
+        18,
+        24,
+        8,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.329,
+        "adventure": 0.641,
+        "risk": 0.677
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "wooden_wild_mouse",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "curveSmall",
+        "curveVerySmall",
+        "flatToSteepSlope",
+        "liftHill",
+        "liftHillSteep",
+        "slope",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        30
+      ],
+      "heights": [
+        14,
+        24,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.332,
+        "adventure": 0.643,
+        "risk": 0.806
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "heartline_twister_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "heartlineRoll",
+        "heartlineTransfer",
+        "liftHill",
+        "liftHillSteep",
+        "slope",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        22,
+        24,
+        15,
+        9
+      ],
+      "axisProfile": {
+        "size": 0.336,
+        "adventure": 0.641,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "inverted_impulse_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "curveVertical",
+        "slope",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        45,
+        40,
+        29,
+        8
+      ],
+      "axisProfile": {
+        "size": 0.358,
+        "adventure": 0.636,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "inverted_hairpin_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "brakes",
+        "curveSmall",
+        "curveVerySmall",
+        "flatToSteepSlope",
+        "liftHill",
+        "liftHillSteep",
+        "slope",
+        "slopeCurve",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        30
+      ],
+      "heights": [
+        16,
+        24,
+        24,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.368,
+        "adventure": 0.65,
+        "risk": 0.806
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "bobsleigh_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "brakes",
+        "curve",
+        "curveSmall",
+        "flatRollBanking",
+        "helixDownBankedHalf",
+        "helixUpBankedHalf",
+        "liftHill",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        19,
+        24,
+        5,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.373,
+        "adventure": 0.65,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixUpBankedHalf"
+        ],
+        "steepDrops": [],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "spinning_wild_mouse",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "brakes",
+        "curveSmall",
+        "curveVerySmall",
+        "flatToSteepSlope",
+        "liftHill",
+        "liftHillSteep",
+        "rotationControlToggle",
+        "slope",
+        "slopeCurve",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        30
+      ],
+      "heights": [
+        16,
+        24,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.378,
+        "adventure": 0.652,
+        "risk": 0.806
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "steel_wild_mouse",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "brakes",
+        "curveSmall",
+        "curveVerySmall",
+        "flatToSteepSlope",
+        "liftHill",
+        "liftHillSteep",
+        "rotationControlToggle",
+        "slope",
+        "slopeCurve",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        30
+      ],
+      "heights": [
+        16,
+        24,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.378,
+        "adventure": 0.652,
+        "risk": 0.806
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "side_friction_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "liftHill",
+        "sBend",
+        "slope",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        48,
+        28,
+        7
+      ],
+      "heights": [
+        18,
+        24,
+        4,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.382,
+        "adventure": 0.652,
+        "risk": 0.677
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "steeplechase",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "helixDownUnbankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "sBend",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        14,
+        24,
+        7,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.385,
+        "adventure": 0.655,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownUnbankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "mine_ride",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagSlope",
+        "flatRollBanking",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        60,
+        20,
+        10
+      ],
+      "heights": [
+        13,
+        24,
+        9,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.394,
+        "adventure": 0.657,
+        "risk": 0.667
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "reverse_freefall_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "liftHillSteep",
+        "onridePhoto",
+        "reverseFreefall",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        44,
+        66,
+        10
+      ],
+      "heights": [
+        255,
+        32,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.433,
+        "adventure": 0.632,
+        "risk": 0.715
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "alpine_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagSlope",
+        "flat",
+        "flatRollBanking",
+        "flatToSteepSlope",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        18,
+        24,
+        3,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.435,
+        "adventure": 0.664,
+        "risk": 0.599
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "suspended_swinging_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "helixDownUnbankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        24,
+        40,
+        29,
+        8
+      ],
+      "axisProfile": {
+        "size": 0.435,
+        "adventure": 0.662,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownUnbankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "mine_train_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "helixDownBankedHalf",
+        "helixUpBankedHalf",
+        "liftHill",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        21,
+        24,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.483,
+        "adventure": 0.673,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixUpBankedHalf"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp"
+        ],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "junior_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "flatToSteepSlope",
+        "helixDownBankedHalf",
+        "helixUpBankedHalf",
+        "liftHill",
+        "liftHillCurve",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        12,
+        24,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.487,
+        "adventure": 0.678,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixUpBankedHalf"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "water_coaster",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "flatToSteepSlope",
+        "helixDownBankedHalf",
+        "helixUpBankedHalf",
+        "liftHill",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        18,
+        24,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.488,
+        "adventure": 0.675,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixUpBankedHalf"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "classic_mini_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "flatToSteepSlope",
+        "helixDownBankedHalf",
+        "helixUpBankedHalf",
+        "liftHill",
+        "liftHillCurve",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        15,
+        24,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.493,
+        "adventure": 0.678,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixUpBankedHalf"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "air_powered_vertical_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "booster",
+        "brakes",
+        "curve",
+        "flatRollBanking",
+        "liftHillCurve",
+        "liftHillSteep",
+        "onridePhoto",
+        "reverseFreefall",
+        "slopeToFlat",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        44,
+        66,
+        10
+      ],
+      "heights": [
+        255,
+        32,
+        4,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.496,
+        "adventure": 0.645,
+        "risk": 0.815
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "mini_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "liftHillCurved",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        16,
+        24,
+        9,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.526,
+        "adventure": 0.685,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "spiral_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "liftHillCurved",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        19,
+        24,
+        9,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.532,
+        "adventure": 0.685,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "classic_wooden_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flat",
+        "flatRollBanking",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "liftHill",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveSteep",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight",
+        "verticalLoop",
+        "waterSplash"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        52,
+        33,
+        4
+      ],
+      "heights": [
+        24,
+        24,
+        8,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.541,
+        "adventure": 0.945,
+        "risk": 0.777
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "verticalLoop"
+        ],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp"
+        ],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "compact_inverted_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "brakes",
+        "corkscrew",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "halfLoop",
+        "helixDownBankedQuarter",
+        "helixUpBankedQuarter",
+        "liftHill",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveSteep",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "twist",
+        "verticalLoop"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        27,
+        40,
+        29,
+        8
+      ],
+      "axisProfile": {
+        "size": 0.547,
+        "adventure": 0.945,
+        "risk": 0.799
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "corkscrew",
+          "halfLoop",
+          "verticalLoop"
+        ],
+        "helices": [
+          "helixDownBankedQuarter",
+          "helixUpBankedQuarter"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "classic_wooden_twister_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flat",
+        "flatRollBanking",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixUpBankedHalf",
+        "liftHill",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveSteep",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight",
+        "verticalLoop",
+        "waterSplash"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        52,
+        33,
+        4
+      ],
+      "heights": [
+        24,
+        24,
+        8,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.573,
+        "adventure": 0.952,
+        "risk": 0.777
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "verticalLoop"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixUpBankedHalf"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "multi_dimension_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "inlineTwistUninverted",
+        "liftHill",
+        "onridePhoto",
+        "quarterLoopUninvertedDown",
+        "quarterLoopUninvertedUp",
+        "sBend",
+        "slope",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        40,
+        24,
+        8,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.582,
+        "adventure": 0.687,
+        "risk": 0.699
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "wooden_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flat",
+        "flatRollBanking",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixUpBankedHalf",
+        "liftHill",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight",
+        "verticalLoop",
+        "waterSplash"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        52,
+        33,
+        8
+      ],
+      "heights": [
+        41,
+        24,
+        8,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.615,
+        "adventure": 0.954,
+        "risk": 0.798
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "verticalLoop"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixUpBankedHalf"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "classic_stand_up_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownUnbankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "onridePhoto",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        30,
+        24,
+        9,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.648,
+        "adventure": 1.0,
+        "risk": 0.799
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownUnbankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "lay_down_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "corkscrewUninverted",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "flyingHalfLoopUninvertedDown",
+        "flyingHalfLoopUninvertedUp",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "inlineTwistUninverted",
+        "liftHill",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight",
+        "verticalLoop"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        26,
+        24,
+        8,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.651,
+        "adventure": 0.928,
+        "risk": 0.799
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "verticalLoop"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "flying_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "flyingHalfLoopUninvertedDown",
+        "flyingHalfLoopUninvertedUp",
+        "flyingLargeHalfLoopUninvertedDown",
+        "flyingLargeHalfLoopUninvertedUp",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "inlineTwistUninverted",
+        "onridePhoto",
+        "poweredLift",
+        "quarterLoopUninvertedUp",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "verticalLoop"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        30,
+        24,
+        8,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.69,
+        "adventure": 0.935,
+        "risk": 0.799
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "verticalLoop"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "lim_launched_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "flatToSteepSlope",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "onridePhoto",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "twist",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        35,
+        24,
+        5,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.699,
+        "adventure": 1.0,
+        "risk": 0.799
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "stand_up_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "onridePhoto",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        25,
+        24,
+        9,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.702,
+        "adventure": 1.0,
+        "risk": 0.799
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "hybrid_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flat",
+        "flatRollBanking",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "inclinedBrakes",
+        "liftHill",
+        "liftHillSteep",
+        "onridePhoto",
+        "poweredLift",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        52,
+        36,
+        10
+      ],
+      "heights": [
+        43,
+        24,
+        13,
+        13
+      ],
+      "axisProfile": {
+        "size": 0.725,
+        "adventure": 0.997,
+        "risk": 0.819
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "quarterLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "looping_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "flatRollBanking",
+        "flatToSteepSlope",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "onridePhoto",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "twist",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        35,
+        24,
+        5,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.742,
+        "adventure": 1.0,
+        "risk": 0.799
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "corkscrew_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "diveLoop",
+        "flatRollBanking",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "onridePhoto",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "twist",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        28,
+        24,
+        8,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.75,
+        "adventure": 1.0,
+        "risk": 0.799
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "diveLoop",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "single_rail_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "diveLoop",
+        "flat",
+        "flatRollBanking",
+        "flatToSteepSlope",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "inclinedBrakes",
+        "liftHill",
+        "liftHillSteep",
+        "onridePhoto",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        52,
+        36,
+        10
+      ],
+      "heights": [
+        28,
+        24,
+        5,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.76,
+        "adventure": 1.0,
+        "risk": 0.819
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "diveLoop",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "inverted_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "diveLoop",
+        "flatRollBanking",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "onridePhoto",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveLargeBanked",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "twist",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        42,
+        40,
+        29,
+        8
+      ],
+      "axisProfile": {
+        "size": 0.765,
+        "adventure": 1.0,
+        "risk": 0.799
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "diveLoop",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "lsm_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBooster",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "diveLoop",
+        "flatRollBanking",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "liftHillCable",
+        "onridePhoto",
+        "poweredLift",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveLargeBanked",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        51,
+        32,
+        10
+      ],
+      "heights": [
+        33,
+        24,
+        9,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.791,
+        "adventure": 1.0,
+        "risk": 0.806
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "diveLoop",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "hypercoaster",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "diveLoop",
+        "flatRollBanking",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "onridePhoto",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "twist",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        55,
+        24,
+        8,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.8,
+        "adventure": 1.0,
+        "risk": 0.799
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "diveLoop",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "twister_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "booster",
+        "brakeForDrop",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "diveLoop",
+        "flat",
+        "flatRollBanking",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "liftHillSteep",
+        "onridePhoto",
+        "poweredLift",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "twist",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        52,
+        36,
+        10
+      ],
+      "heights": [
+        40,
+        24,
+        8,
+        9
+      ],
+      "axisProfile": {
+        "size": 0.814,
+        "adventure": 1.0,
+        "risk": 0.819
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "diveLoop",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "vertical_drop_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "booster",
+        "brakeForDrop",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "diveLoop",
+        "flat",
+        "flatRollBanking",
+        "flatToSteepSlope",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "liftHillSteep",
+        "onridePhoto",
+        "poweredLift",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "twist",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        52,
+        38,
+        10
+      ],
+      "heights": [
+        55,
+        24,
+        8,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.853,
+        "adventure": 1.0,
+        "risk": 0.825
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "diveLoop",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "hyper_twister",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "booster",
+        "brakeForDrop",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "diveLoop",
+        "flat",
+        "flatRollBanking",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "liftHillSteep",
+        "onridePhoto",
+        "poweredLift",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "twist",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        52,
+        36,
+        10
+      ],
+      "heights": [
+        61,
+        24,
+        8,
+        9
+      ],
+      "axisProfile": {
+        "size": 0.854,
+        "adventure": 1.0,
+        "risk": 0.819
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "diveLoop",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "giga_rc",
+      "category": "rollerCoaster",
+      "trackGroups": [
+        "barrelRoll",
+        "blockBrakes",
+        "booster",
+        "brakes",
+        "corkscrew",
+        "corkscrewLarge",
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVertical",
+        "diagBlockBrakes",
+        "diagBooster",
+        "diagBrakes",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepLong",
+        "diagSlopeSteepUp",
+        "diveLoop",
+        "flatRollBanking",
+        "halfLoop",
+        "halfLoopLarge",
+        "halfLoopMedium",
+        "helixDownBankedHalf",
+        "helixDownBankedQuarter",
+        "helixDownUnbankedQuarter",
+        "helixUpBankedHalf",
+        "helixUpBankedQuarter",
+        "helixUpUnbankedQuarter",
+        "liftHill",
+        "liftHillCable",
+        "onridePhoto",
+        "poweredLift",
+        "quarterLoop",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveBanked",
+        "slopeCurveLarge",
+        "slopeCurveSteep",
+        "slopeRollBanking",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "slopeVertical",
+        "stationEnd",
+        "straight",
+        "verticalLoop",
+        "zeroGRoll",
+        "zeroGRollLarge"
+      ],
+      "hasInversions": true,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        51,
+        32,
+        10
+      ],
+      "heights": [
+        86,
+        24,
+        9,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.88,
+        "adventure": 1.0,
+        "risk": 0.806
+      },
+      "buildOut": {
+        "isCoaster": true,
+        "isTower": false,
+        "inversions": [
+          "barrelRoll",
+          "corkscrew",
+          "corkscrewLarge",
+          "diveLoop",
+          "halfLoop",
+          "halfLoopLarge",
+          "halfLoopMedium",
+          "quarterLoop",
+          "verticalLoop",
+          "zeroGRoll",
+          "zeroGRollLarge"
+        ],
+        "helices": [
+          "helixDownBankedHalf",
+          "helixDownBankedQuarter",
+          "helixDownUnbankedQuarter",
+          "helixUpBankedHalf",
+          "helixUpBankedQuarter",
+          "helixUpUnbankedQuarter"
+        ],
+        "steepDrops": [
+          "curveVertical",
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp",
+          "slopeVertical"
+        ],
+        "banking": [
+          "flatRollBanking",
+          "slopeCurveBanked",
+          "slopeRollBanking"
+        ],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "cash_machine",
+      "category": "shop",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        0,
+        0,
+        0
+      ],
+      "heights": null,
+      "axisProfile": {
+        "size": 0.08,
+        "adventure": 0.02,
+        "risk": 0.02
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "drink_stall",
+      "category": "shop",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        0,
+        0,
+        0
+      ],
+      "heights": null,
+      "axisProfile": {
+        "size": 0.08,
+        "adventure": 0.02,
+        "risk": 0.02
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "first_aid",
+      "category": "shop",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        0,
+        0,
+        0
+      ],
+      "heights": null,
+      "axisProfile": {
+        "size": 0.08,
+        "adventure": 0.02,
+        "risk": 0.02
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "food_stall",
+      "category": "shop",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        0,
+        0,
+        0
+      ],
+      "heights": null,
+      "axisProfile": {
+        "size": 0.08,
+        "adventure": 0.02,
+        "risk": 0.02
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "information_kiosk",
+      "category": "shop",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        0,
+        0,
+        0
+      ],
+      "heights": null,
+      "axisProfile": {
+        "size": 0.08,
+        "adventure": 0.02,
+        "risk": 0.02
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "shop",
+      "category": "shop",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        0,
+        0,
+        0
+      ],
+      "heights": null,
+      "axisProfile": {
+        "size": 0.08,
+        "adventure": 0.02,
+        "risk": 0.02
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "toilets",
+      "category": "shop",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        0,
+        0,
+        0
+      ],
+      "heights": null,
+      "axisProfile": {
+        "size": 0.08,
+        "adventure": 0.02,
+        "risk": 0.02
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "3d_cinema",
+      "category": "thrill",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        20,
+        10,
+        0
+      ],
+      "heights": [
+        12,
+        128,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.303,
+        "adventure": 0.55,
+        "risk": 0.652
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "motion_simulator",
+      "category": "thrill",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        24,
+        20,
+        10
+      ],
+      "heights": [
+        12,
+        64,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.303,
+        "adventure": 0.55,
+        "risk": 0.737
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "swinging_ship",
+      "category": "thrill",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        12,
+        112,
+        7,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.303,
+        "adventure": 0.55,
+        "risk": 0.769
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "twist",
+      "category": "thrill",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        40,
+        20,
+        10
+      ],
+      "heights": [
+        12,
+        64,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.303,
+        "adventure": 0.55,
+        "risk": 0.737
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "magic_carpet",
+      "category": "thrill",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        15,
+        176,
+        7,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.308,
+        "adventure": 0.55,
+        "risk": 0.769
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "swinging_inverter_ship",
+      "category": "thrill",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        15,
+        176,
+        7,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.308,
+        "adventure": 0.55,
+        "risk": 0.769
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "enterprise",
+      "category": "thrill",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        10,
+        0
+      ],
+      "heights": [
+        16,
+        160,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.31,
+        "adventure": 0.55,
+        "risk": 0.652
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "top_spin",
+      "category": "thrill",
+      "trackGroups": [],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        24,
+        20,
+        10
+      ],
+      "heights": [
+        16,
+        112,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.31,
+        "adventure": 0.55,
+        "risk": 0.737
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "go_karts",
+      "category": "thrill",
+      "trackGroups": [
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVerySmall",
+        "diagSlope",
+        "diagSlopeSteepDown",
+        "diagSlopeSteepUp",
+        "sBend",
+        "slope",
+        "slopeCurve",
+        "slopeCurveLarge",
+        "slopeSteepDown",
+        "slopeSteepLong",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        120,
+        20,
+        0
+      ],
+      "heights": [
+        8,
+        24,
+        2,
+        1
+      ],
+      "axisProfile": {
+        "size": 0.464,
+        "adventure": 0.587,
+        "risk": 0.684
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepLong",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "launched_freefall",
+      "category": "thrill",
+      "trackGroups": [
+        "tower"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        50,
+        10
+      ],
+      "heights": [
+        255,
+        32,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.471,
+        "adventure": 0.552,
+        "risk": 0.833
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": true,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "roto_drop",
+      "category": "thrill",
+      "trackGroups": [
+        "tower"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        50,
+        10
+      ],
+      "heights": [
+        255,
+        32,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.471,
+        "adventure": 0.552,
+        "risk": 0.833
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": true,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "miniature_railway",
+      "category": "transport",
+      "trackGroups": [
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagSlope",
+        "sBend",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": null,
+      "heights": [
+        7,
+        32,
+        5,
+        9
+      ],
+      "axisProfile": {
+        "size": 0.878,
+        "adventure": 0.238,
+        "risk": 0.317
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "monorail",
+      "category": "transport",
+      "trackGroups": [
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagSlope",
+        "sBend",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": null,
+      "heights": [
+        8,
+        32,
+        8,
+        9
+      ],
+      "axisProfile": {
+        "size": 0.88,
+        "adventure": 0.238,
+        "risk": 0.317
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "suspended_monorail",
+      "category": "transport",
+      "trackGroups": [
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "diagSlope",
+        "sBend",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": null,
+      "heights": [
+        12,
+        40,
+        32,
+        8
+      ],
+      "axisProfile": {
+        "size": 0.887,
+        "adventure": 0.238,
+        "risk": 0.317
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "chairlift",
+      "category": "transport",
+      "trackGroups": [
+        "curveVerySmall",
+        "slope",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        70,
+        10,
+        0
+      ],
+      "heights": [
+        40,
+        32,
+        28,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.897,
+        "adventure": 0.229,
+        "risk": 0.232
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "lift",
+      "category": "transport",
+      "trackGroups": [
+        "tower"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        80,
+        10,
+        0
+      ],
+      "heights": [
+        255,
+        32,
+        3,
+        2
+      ],
+      "axisProfile": {
+        "size": 0.971,
+        "adventure": 0.222,
+        "risk": 0.232
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": true,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "river_rafts",
+      "category": "water",
+      "trackGroups": [
+        "curve",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeSteepDown",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        80,
+        34,
+        6
+      ],
+      "heights": [
+        12,
+        24,
+        7,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.547,
+        "adventure": 0.466,
+        "risk": 0.541
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown"
+        ],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "river_rapids",
+      "category": "water",
+      "trackGroups": [
+        "curveVerySmall",
+        "onridePhoto",
+        "rapids",
+        "slope",
+        "stationEnd",
+        "straight",
+        "waterfall",
+        "whirlpool"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        72,
+        26,
+        6
+      ],
+      "heights": [
+        9,
+        32,
+        14,
+        15
+      ],
+      "axisProfile": {
+        "size": 0.551,
+        "adventure": 0.468,
+        "risk": 0.515
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "log_flume",
+      "category": "water",
+      "trackGroups": [
+        "curveSmall",
+        "logFlumeReverser",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeSteepDown",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        80,
+        34,
+        6
+      ],
+      "heights": [
+        10,
+        24,
+        7,
+        9
+      ],
+      "axisProfile": {
+        "size": 0.553,
+        "adventure": 0.468,
+        "risk": 0.541
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown"
+        ],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "splash_boats",
+      "category": "water",
+      "trackGroups": [
+        "curve",
+        "onridePhoto",
+        "sBend",
+        "slope",
+        "slopeSteepDown",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        80,
+        34,
+        6
+      ],
+      "heights": [
+        16,
+        24,
+        7,
+        11
+      ],
+      "axisProfile": {
+        "size": 0.554,
+        "adventure": 0.466,
+        "risk": 0.541
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown"
+        ],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "dinghy_slide",
+      "category": "water",
+      "trackGroups": [
+        "curve",
+        "curveSmall",
+        "liftHill",
+        "sBend",
+        "slope",
+        "slopeSteepDown",
+        "slopeSteepUp",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        50,
+        30,
+        10
+      ],
+      "heights": [
+        15,
+        24,
+        5,
+        7
+      ],
+      "axisProfile": {
+        "size": 0.573,
+        "adventure": 0.471,
+        "risk": 0.549
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [
+          "slopeSteepDown",
+          "slopeSteepUp"
+        ],
+        "banking": [],
+        "supportsLiftHill": true
+      }
+    },
+    {
+      "name": "submarine_ride",
+      "category": "water",
+      "trackGroups": [
+        "curveSmall",
+        "curveVerySmall",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": true,
+      "ratingsMultipliers": [
+        70,
+        6,
+        0
+      ],
+      "heights": [
+        255,
+        16,
+        0,
+        3
+      ],
+      "axisProfile": {
+        "size": 0.672,
+        "adventure": 0.459,
+        "risk": 0.519
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    },
+    {
+      "name": "boat_hire",
+      "category": "water",
+      "trackGroups": [
+        "curve",
+        "curveLarge",
+        "curveSmall",
+        "curveVerySmall",
+        "sBend",
+        "stationEnd",
+        "straight"
+      ],
+      "hasInversions": false,
+      "hasGForces": false,
+      "ratingsMultipliers": [
+        70,
+        6,
+        0
+      ],
+      "heights": [
+        255,
+        16,
+        0,
+        3
+      ],
+      "axisProfile": {
+        "size": 0.704,
+        "adventure": 0.466,
+        "risk": 0.419
+      },
+      "buildOut": {
+        "isCoaster": false,
+        "isTower": false,
+        "inversions": [],
+        "helices": [],
+        "steepDrops": [],
+        "banking": [],
+        "supportsLiftHill": false
+      }
+    }
+  ]
+}

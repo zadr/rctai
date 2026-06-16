@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rctai/schemas/work-model.schema.json",
+  "title": "WorkModel",
+  "description": "Normalised description of a repository's work, extracted from git + GitHub PRs + (optional) Claude sessions. park = repo, ride = PR.",
+  "type": "object",
+  "required": ["schemaVersion", "repo", "branch", "generatedAt", "prs"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "repo": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "defaultBranch": { "type": "string" }
+      }
+    },
+    "branch": { "type": "string" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "prs": { "type": "array", "items": { "$ref": "#/definitions/pr" } }
+  },
+  "definitions": {
+    "pr": {
+      "type": "object",
+      "required": ["id", "title", "additions", "deletions", "filesChanged", "commits"],
+      "properties": {
+        "id": { "type": "string", "description": "Stable id, e.g. PR-123 or SYNTH-3 for synthetic PRs from merge topology." },
+        "number": { "type": ["integer", "null"] },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "state": { "enum": ["open", "merged", "closed", "synthetic"] },
+        "createdAt": { "type": ["string", "null"], "format": "date-time" },
+        "mergedAt": { "type": ["string", "null"], "format": "date-time" },
+        "durationHours": { "type": ["number", "null"] },
+        "commits": { "type": "integer", "minimum": 0 },
+        "filesChanged": { "type": "integer", "minimum": 0 },
+        "newFiles": { "type": "integer", "minimum": 0 },
+        "additions": { "type": "integer", "minimum": 0 },
+        "deletions": { "type": "integer", "minimum": 0 },
+        "languages": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" },
+          "description": "lines changed per language key, e.g. {\"go\":480,\"yaml\":60}"
+        },
+        "categories": {
+          "type": "object",
+          "additionalProperties": { "type": "number" },
+          "description": "fractional mix summing ~1.0 across: feature, refactor, perf, test, build, config, docs, chore"
+        },
+        "signals": {
+          "type": "object",
+          "properties": {
+            "touchesTests": { "type": "boolean" },
+            "touchesConfig": { "type": "boolean" },
+            "touchesDocs": { "type": "boolean" },
+            "codeTouchedNoTests": { "type": "boolean" },
+            "hasRevert": { "type": "boolean" },
+            "forcePush": { "type": "boolean" },
+            "netDeletion": { "type": "boolean" },
+            "hotFiles": { "type": "array", "items": { "type": "string" } },
+            "reviewCount": { "type": "integer" },
+            "approvals": { "type": "integer" }
+          }
+        },
+        "session": {
+          "type": ["object", "null"],
+          "description": "Optional metrics from a linked Claude Code session (jsonl).",
+          "properties": {
+            "sessionId": { "type": "string" },
+            "durationMinutes": { "type": "number" },
+            "userTurns": { "type": "integer" },
+            "toolCalls": { "type": "integer" },
+            "edits": { "type": "integer" },
+            "bashCalls": { "type": "integer" },
+            "errors": { "type": "integer" },
+            "retries": { "type": "integer" }
+          }
+        }
+      }
+    }
+  }
+}
