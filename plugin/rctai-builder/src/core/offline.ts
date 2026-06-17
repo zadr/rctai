@@ -129,6 +129,10 @@ namespace RctaiBuilder {
       };
     }
 
+    inspectSurfaces(coords: RctaiBuilder.Coord[]): RctaiBuilder.ParkInspectionSurface[] {
+      return coords.map((coord) => ({ x: coord.x, y: coord.y, z: null }));
+    }
+
     inspectTracks(): RctaiBuilder.ParkInspectionTrack[] {
       return [];
     }

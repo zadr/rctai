@@ -133,6 +133,10 @@ namespace RctaiBuilder {
       return this.adapter.inspectPark();
     }
 
+    inspectSurfaces(coords: RctaiBuilder.Coord[]): RctaiBuilder.ParkInspectionSurface[] {
+      return this.adapter.inspectSurfaces(coords);
+    }
+
     inspectTracks(rideIds: number[] | null): RctaiBuilder.ParkInspectionTrack[] {
       return this.adapter.inspectTracks(rideIds);
     }

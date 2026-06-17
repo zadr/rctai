@@ -83,6 +83,22 @@ test("routes filtered track inspection", () => {
   assert.equal(invalid.status, 400);
 });
 
+test("routes surface inspection", () => {
+  const active = controller();
+  const response = builder.handleHttpRequest(
+    request("POST", "/inspect-surfaces", JSON.stringify({ coords: [{ x: 1, y: 2 }] })),
+    active
+  );
+  const invalid = builder.handleHttpRequest(
+    request("POST", "/inspect-surfaces", JSON.stringify({ coords: [{ x: "bad", y: 2 }] })),
+    active
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.surfaces, [{ x: 1, y: 2, z: null }]);
+  assert.equal(invalid.status, 400);
+});
+
 test("routes filtered track traversal inspection", () => {
   const active = controller();
   const response = builder.handleHttpRequest(

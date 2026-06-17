@@ -10,7 +10,9 @@ const DEFAULT_HOST_PORT = 11753;
 const DEFAULT_BUILDER_PORT = 6427;
 const FIRST_MONTH_TICKS = 16_384;
 const FOOTPATH_BATCH_SIZE = 1_000;
+const SURFACE_BATCH_SIZE = 1_000;
 const TRACK_RIDE_BATCH_SIZE = 12;
+const GENERATED_TRACK_SURFACE_CLEARANCE = 32;
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
 
 const options = parseArgs(process.argv.slice(2));
@@ -222,6 +224,7 @@ async function getInspection(port, plan) {
   const trackRideIds = plannedTrackRideIds(plan, inspection.park.rides ?? []);
   inspection.park.footpaths = await fetchInspectionFootpaths(port, coords);
   inspection.park.tracks = await fetchInspectionTracks(port, trackRideIds);
+  inspection.park.surfaces = await fetchInspectionSurfaces(port, surfaceCoordsForTracks(inspection.park.tracks));
   inspection.park.trackTraversals = await fetchInspectionTrackTraversals(port, trackRideIds);
   inspection.park.trackSegments = await fetchInspectionTrackSegments(port, plannedTrackTypes(plan));
   return inspection;
@@ -301,12 +304,33 @@ async function fetchInspectionTrackTraversals(port, rideIds) {
   return traversals;
 }
 
+async function fetchInspectionSurfaces(port, coords) {
+  if (coords.length === 0) {
+    return [];
+  }
+  const surfaces = [];
+  for (let index = 0; index < coords.length; index += SURFACE_BATCH_SIZE) {
+    const batch = coords.slice(index, index + SURFACE_BATCH_SIZE);
+    const response = await postJson(port, "/inspect-surfaces", { coords: batch });
+    surfaces.push(...(response.surfaces ?? []));
+  }
+  return surfaces;
+}
+
 async function fetchInspectionTrackSegments(port, types) {
   if (types.length === 0) {
     return {};
   }
   const response = await fetchJson(port, `/track-segments?types=${types.join(",")}`);
   return response.segments ?? {};
+}
+
+function surfaceCoordsForTracks(tracks) {
+  const coords = new Map();
+  for (const track of tracks ?? []) {
+    coords.set(xyKey(track), { x: track.x, y: track.y });
+  }
+  return [...coords.values()];
 }
 
 function plannedTrackRideIds(plan, actualRides) {
@@ -369,6 +393,7 @@ function validateInspection(plan, inspection, phase) {
   const footpathTiles = new Set(footpaths.map((footpath) => coordKey(footpath)));
   const tracksByRide = tracksByRideId(inspection.park.tracks ?? []);
   const traversalsByRide = traversalsByRideId(inspection.park.trackTraversals ?? []);
+  const surfacesByXY = surfacesByCoord(inspection.park.surfaces ?? []);
   const trackSegments = inspection.park.trackSegments ?? {};
   const entranceTiles = footpaths.filter(
     (footpath) => footpath.x === plan.park.entrance.x && footpath.y === plan.park.entrance.y
@@ -416,7 +441,7 @@ function validateInspection(plan, inspection, phase) {
       }
     }
     if (requiresPlacedTrackValidation(expected)) {
-      phaseIssues.push(...validatePlacedTrackGraph(expected, actual, tracksByRide, trackSegments, phase));
+      phaseIssues.push(...validatePlacedTrackGraph(expected, actual, tracksByRide, surfacesByXY, trackSegments, phase));
       phaseIssues.push(...validateTrackTraversal(expected, actual, traversalsByRide, phase));
     }
   }
@@ -462,12 +487,15 @@ function validateTrackTraversal(ride, actual, traversalsByRide, phase) {
   return issues;
 }
 
-function validatePlacedTrackGraph(ride, actual, tracksByRide, trackSegments, phase) {
+function validatePlacedTrackGraph(ride, actual, tracksByRide, surfacesByXY, trackSegments, phase) {
   const issues = [];
-  const actualTracks = (tracksByRide.get(actual.id) ?? []).filter((track) => track.sequence === 0);
+  const allActualTracks = tracksByRide.get(actual.id) ?? [];
+  const actualTracks = allActualTracks.filter((track) => track.sequence === 0);
   if (actualTracks.length === 0) {
     return [`${phase}: ride ${ride.id} has no placed track elements`];
   }
+
+  issues.push(...validateActualTrackTerrainClearance(ride, allActualTracks, surfacesByXY, phase));
 
   const firstSegment = ride.track[0];
   if (firstSegment === undefined) {
@@ -658,6 +686,34 @@ function validateActualTrackComponents(ride, actualTracks, trackSegments, phase)
   return issues;
 }
 
+function validateActualTrackTerrainClearance(ride, actualTracks, surfacesByXY, phase) {
+  const buried = [];
+  for (const track of actualTracks) {
+    const surface = surfacesByXY.get(xyKey(track));
+    if (surface === undefined || surface.z === null || surface.z === undefined) {
+      continue;
+    }
+    if (track.z < surface.z + GENERATED_TRACK_SURFACE_CLEARANCE) {
+      buried.push({ track, surface });
+    }
+  }
+
+  if (buried.length === 0) {
+    return [];
+  }
+
+  const examples = buried
+    .slice(0, 8)
+    .map(
+      ({ track, surface }) =>
+        `(${track.x},${track.y}) track z${track.z} needs terrain z${surface.z}+${GENERATED_TRACK_SURFACE_CLEARANCE} t${track.trackType} seq${track.sequence}`
+    )
+    .join("; ");
+  return [
+    `${phase}: ride ${ride.id} has ${buried.length} track element(s) too close to terrain surface; first buried/occluded: ${examples}`
+  ];
+}
+
 function requiresPlacedTrackValidation(ride) {
   return (
     Array.isArray(ride.track) &&
@@ -689,6 +745,14 @@ function traversalsByRideId(traversals) {
     byRide.set(traversal.ride, group);
   }
   return byRide;
+}
+
+function surfacesByCoord(surfaces) {
+  const byCoord = new Map();
+  for (const surface of surfaces) {
+    byCoord.set(xyKey(surface), surface);
+  }
+  return byCoord;
 }
 
 function countedTrackKeys(keys) {

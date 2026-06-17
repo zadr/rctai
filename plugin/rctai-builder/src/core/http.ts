@@ -31,6 +31,7 @@ namespace RctaiBuilder {
     enqueueSave(name: string): string;
     getStatus(): RctaiBuilder.BuildStatus;
     inspectPark(): RctaiBuilder.ParkInspection;
+    inspectSurfaces(coords: RctaiBuilder.Coord[]): RctaiBuilder.ParkInspectionSurface[];
     inspectTracks(rideIds: number[] | null): RctaiBuilder.ParkInspectionTrack[];
     inspectTrackTraversals(rideIds: number[] | null): RctaiBuilder.ParkInspectionTrackTraversal[];
     inspectTrackSegments(types: number[]): Record<string, RctaiBuilder.TrackSegmentInfo | null>;
@@ -198,6 +199,22 @@ namespace RctaiBuilder {
       });
     }
 
+    if (request.method === "POST" && request.path === "/inspect-surfaces") {
+      const parsedBody = parseJsonBody(request.body);
+      if (!parsedBody.ok) {
+        return json(400, { error: parsedBody.error });
+      }
+      const parsedCoords = parseSurfaceCoords(parsedBody.value);
+      if (!parsedCoords.ok) {
+        return json(400, { error: parsedCoords.error });
+      }
+      return json(200, {
+        status: "ok",
+        version: RctaiBuilder.VERSION,
+        surfaces: controller.inspectSurfaces(parsedCoords.coords)
+      });
+    }
+
     if (request.method === "POST" && request.path === "/inspect-track-traversals") {
       const parsedBody = parseJsonBody(request.body);
       if (!parsedBody.ok) {
@@ -282,6 +299,7 @@ namespace RctaiBuilder {
       request.path === "/inspect" ||
       request.path === "/inspect-footpaths" ||
       request.path === "/inspect-tracks" ||
+      request.path === "/inspect-surfaces" ||
       request.path === "/inspect-track-traversals" ||
       request.path === "/track-segments" ||
       request.path === "/build" ||
@@ -358,6 +376,24 @@ namespace RctaiBuilder {
       return footpaths;
     }
     return footpaths.filter((footpath) => filter.has(`${footpath.x},${footpath.y}`));
+  }
+
+  function parseSurfaceCoords(input: unknown): { ok: true; coords: RctaiBuilder.Coord[] } | { ok: false; error: string } {
+    const coords = typeof input === "object" && input !== null
+      ? (input as { coords?: unknown }).coords
+      : undefined;
+    if (!Array.isArray(coords)) {
+      return { ok: false, error: "coords must be an array of coordinates" };
+    }
+
+    const result: RctaiBuilder.Coord[] = [];
+    for (const [index, coord] of coords.entries()) {
+      if (!isCoordLike(coord)) {
+        return { ok: false, error: `coords[${index}] must contain integer x and y` };
+      }
+      result.push({ x: coord.x, y: coord.y });
+    }
+    return { ok: true, coords: result };
   }
 
   function parseRideIdFilter(input: unknown): { ok: true; rideIds: number[] | null } | { ok: false; error: string } {

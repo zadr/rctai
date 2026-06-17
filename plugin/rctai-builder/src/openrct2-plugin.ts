@@ -235,6 +235,14 @@ namespace RctaiBuilder {
       return tracks;
     }
 
+    inspectSurfaces(coords: RctaiBuilder.Coord[]): RctaiBuilder.ParkInspectionSurface[] {
+      return coords.map((coord) => ({
+        x: coord.x,
+        y: coord.y,
+        z: this.getSurfaceZ(coord.x, coord.y)
+      }));
+    }
+
     inspectTrackTraversals(rideIds: number[] | null): RctaiBuilder.ParkInspectionTrackTraversal[] {
       const filter = rideIds === null ? null : new Set(rideIds);
       const traversals: RctaiBuilder.ParkInspectionTrackTraversal[] = [];

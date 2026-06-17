@@ -213,6 +213,12 @@ namespace RctaiBuilder {
     station?: number | null;
   }
 
+  export interface ParkInspectionSurface {
+    x: number;
+    y: number;
+    z: number | null;
+  }
+
   export interface ParkInspectionTrack {
     x: number;
     y: number;
@@ -261,6 +267,7 @@ namespace RctaiBuilder {
     clearPathsAndScenery(callback: (result: GameActionResultLike) => void): void;
     getExistingRideIds(): number[];
     inspectPark(): ParkInspection;
+    inspectSurfaces(coords: Coord[]): ParkInspectionSurface[];
     inspectTracks(rideIds: number[] | null): ParkInspectionTrack[];
     inspectTrackTraversals(rideIds: number[] | null): ParkInspectionTrackTraversal[];
     resetRuntimeEvents(): void;

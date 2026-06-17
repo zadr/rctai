@@ -112,6 +112,7 @@ namespace RctaiBuilder {
   const PATH_SLOPED = 1;
   const PATH_HEIGHT_STEP = 16;
   const FOOTPRINT_SURFACE_CLEARANCE = 16;
+  const GENERATED_TRACK_SURFACE_CLEARANCE = 32;
   const MAX_BUILD_Z = 248 * 8;
   const RIDE_SET_VEHICLE_NUM_TRAINS = 0;
   const SINGLE_TRAIN_COUNT = 1;
@@ -647,7 +648,8 @@ namespace RctaiBuilder {
   ): number {
     const explicit = explicitRideOriginZ(ride);
     const surfaceMax = maxSurfaceZ(adapter, rideTerrainCoords(ride, plan));
-    const terrainZ = surfaceMax === null ? null : alignBuildZ(surfaceMax + FOOTPRINT_SURFACE_CLEARANCE);
+    const clearance = hasGeneratedTrack(ride) ? GENERATED_TRACK_SURFACE_CLEARANCE : FOOTPRINT_SURFACE_CLEARANCE;
+    const terrainZ = surfaceMax === null ? null : alignBuildZ(surfaceMax + clearance);
     return clampBuildZ(Math.max(explicit ?? planBuildZ(plan), terrainZ ?? RctaiBuilder.DEFAULT_Z));
   }
 
