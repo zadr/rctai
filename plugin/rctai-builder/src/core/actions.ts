@@ -206,9 +206,11 @@ namespace RctaiBuilder {
       );
     }
     steps.push(
-      RctaiBuilder.createGameActionStep("clear paths and scenery", "clearscenery", () => ({
-        itemsToClear: 1 | 2 | 4
-      }))
+      RctaiBuilder.createAdapterStep(
+        "clear paths, track, and scenery",
+        (adapter, _state, done) => adapter.clearPathsAndScenery(done),
+        { critical: true }
+      )
     );
     return steps;
   }
@@ -533,7 +535,7 @@ namespace RctaiBuilder {
         if (spec === undefined) {
           return null;
         }
-        const key = `${spec.coord.x},${spec.coord.y},${spec.z}`;
+        const key = pathTileBuildSpecKey(spec);
         if (state.pathTiles[key] === true) {
           return null;
         }
@@ -777,6 +779,11 @@ namespace RctaiBuilder {
     }
 
     return { slopeType: PATH_FLAT, slopeDirection: 0 };
+  }
+
+  function pathTileBuildSpecKey(spec: PathTileBuildSpec): string {
+    const slope = spec.slopeType === PATH_SLOPED ? spec.slopeDirection : "flat";
+    return `${spec.coord.x},${spec.coord.y},${spec.z},${slope}`;
   }
 
   function directionBetweenTiles(from: RctaiBuilder.Coord, to: RctaiBuilder.Coord): number {

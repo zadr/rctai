@@ -205,7 +205,7 @@ namespace RctaiBuilder {
   export interface ParkInspectionFootpath {
     x: number;
     y: number;
-    z?: number;
+    z: number;
     direction?: number;
     slopeDirection?: number | null;
     isQueue?: boolean;
@@ -226,6 +226,7 @@ namespace RctaiBuilder {
     inspectTrackSegments(types: number[]): Record<string, TrackSegmentInfo | null>;
     getSurfaceZ(x: number, y: number): number | null;
     placeRawTrack(args: RawTrackArgs): void;
+    clearPathsAndScenery(callback: (result: GameActionResultLike) => void): void;
     getExistingRideIds(): number[];
     inspectPark(): ParkInspection;
     resetRuntimeEvents(): void;

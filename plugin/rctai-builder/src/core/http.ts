@@ -144,6 +144,42 @@ namespace RctaiBuilder {
       });
     }
 
+    if (request.method === "POST" && request.path === "/inspect") {
+      const parsedBody = parseJsonBody(request.body);
+      if (!parsedBody.ok) {
+        return json(400, { error: parsedBody.error });
+      }
+      const parsedFilter = parseFootpathFilter(parsedBody.value);
+      if (!parsedFilter.ok) {
+        return json(400, { error: parsedFilter.error });
+      }
+      const park = controller.inspectPark();
+      return json(200, {
+        status: "ok",
+        version: RctaiBuilder.VERSION,
+        park: {
+          ...park,
+          footpaths: filterFootpaths(park.footpaths, parsedFilter.filter)
+        }
+      });
+    }
+
+    if (request.method === "POST" && request.path === "/inspect-footpaths") {
+      const parsedBody = parseJsonBody(request.body);
+      if (!parsedBody.ok) {
+        return json(400, { error: parsedBody.error });
+      }
+      const parsedFilter = parseFootpathFilter(parsedBody.value);
+      if (!parsedFilter.ok) {
+        return json(400, { error: parsedFilter.error });
+      }
+      return json(200, {
+        status: "ok",
+        version: RctaiBuilder.VERSION,
+        footpaths: filterFootpaths(controller.inspectPark().footpaths, parsedFilter.filter)
+      });
+    }
+
     if (request.method === "GET" && request.path === "/track-segments") {
       const types = parseTrackSegmentTypes(request.query.types ?? "");
       return json(200, {
@@ -210,6 +246,7 @@ namespace RctaiBuilder {
     if (
       request.path === "/health" ||
       request.path === "/inspect" ||
+      request.path === "/inspect-footpaths" ||
       request.path === "/track-segments" ||
       request.path === "/build" ||
       request.path === "/clear" ||
@@ -254,6 +291,45 @@ namespace RctaiBuilder {
     } catch {
       return { ok: false, error: "request body must be valid JSON" };
     }
+  }
+
+  function parseFootpathFilter(input: unknown): { ok: true; filter: Set<string> | null } | { ok: false; error: string } {
+    const footpaths = typeof input === "object" && input !== null
+      ? (input as { footpaths?: unknown }).footpaths
+      : undefined;
+    if (footpaths === undefined || footpaths === "all") {
+      return { ok: true, filter: null };
+    }
+    if (!Array.isArray(footpaths)) {
+      return { ok: false, error: "footpaths must be an array of coordinates or \"all\"" };
+    }
+
+    const filter = new Set<string>();
+    for (const [index, footpath] of footpaths.entries()) {
+      if (!isCoordLike(footpath)) {
+        return { ok: false, error: `footpaths[${index}] must contain integer x and y` };
+      }
+      filter.add(`${footpath.x},${footpath.y}`);
+    }
+    return { ok: true, filter };
+  }
+
+  function filterFootpaths(
+    footpaths: RctaiBuilder.ParkInspectionFootpath[],
+    filter: Set<string> | null
+  ): RctaiBuilder.ParkInspectionFootpath[] {
+    if (filter === null) {
+      return footpaths;
+    }
+    return footpaths.filter((footpath) => filter.has(`${footpath.x},${footpath.y}`));
+  }
+
+  function isCoordLike(input: unknown): input is RctaiBuilder.Coord {
+    if (typeof input !== "object" || input === null) {
+      return false;
+    }
+    const coord = input as { x?: unknown; y?: unknown };
+    return Number.isInteger(coord.x) && Number.isInteger(coord.y);
   }
 
   function parseTrackSegmentTypes(input: string): number[] {

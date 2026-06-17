@@ -145,6 +145,29 @@ namespace RctaiBuilder {
       element.seatRotation = args.seatRotation;
     }
 
+    clearPathsAndScenery(callback: (result: RctaiBuilder.GameActionResultLike) => void): void {
+      try {
+        for (let x = 0; x < map.size.x; x += 1) {
+          for (let y = 0; y < map.size.y; y += 1) {
+            const tile = map.getTile(x, y);
+            for (let index = tile.numElements - 1; index >= 0; index -= 1) {
+              const element = tile.getElement(index);
+              if (isClearableTileElement(element)) {
+                tile.removeElement(index);
+              }
+            }
+          }
+        }
+        callback({});
+      } catch (error) {
+        callback({
+          error: 1,
+          errorTitle: "Clear failed",
+          errorMessage: error instanceof Error ? error.message : "OpenRCT2 rejected tile cleanup"
+        });
+      }
+    }
+
     getExistingRideIds(): number[] {
       return map.rides.map((ride) => ride.id);
     }
@@ -287,6 +310,17 @@ namespace RctaiBuilder {
     return identifiers;
   }
 
+  function isClearableTileElement(element: TileElement): boolean {
+    return (
+      element.type === "track" ||
+      element.type === "footpath" ||
+      element.type === "small_scenery" ||
+      element.type === "wall" ||
+      element.type === "large_scenery" ||
+      element.type === "banner"
+    );
+  }
+
   function safeLoadObject(identifier: string): LoadedObject | null {
     try {
       return objectManager.load(identifier);
@@ -310,7 +344,12 @@ namespace RctaiBuilder {
         const tile = map.getTile(x, y);
         for (const element of tile.elements) {
           if (element.type === "footpath") {
-            footpaths.push({ x, y });
+            footpaths.push({
+              x,
+              y,
+              z: element.baseZ,
+              slopeDirection: element.slopeDirection
+            });
           }
         }
       }

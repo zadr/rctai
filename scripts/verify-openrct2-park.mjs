@@ -9,6 +9,7 @@ const DEFAULT_OPENRCT2 = process.env.OPENRCT2_BIN ?? "openrct2";
 const DEFAULT_HOST_PORT = 11753;
 const DEFAULT_BUILDER_PORT = 6427;
 const FIRST_MONTH_TICKS = 16_384;
+const FOOTPATH_BATCH_SIZE = 1_000;
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
 
 const BEGIN_STATION = 2;
@@ -49,7 +50,7 @@ try {
   await waitForBuilder(options.builderPort, options.startTimeoutMs);
   await postJson(options.builderPort, "/reset-runtime-events", {});
 
-  let inspection = await getInspection(options.builderPort);
+  let inspection = await getInspection(options.builderPort, plan);
   issues.push(...validateInspection(plan, inspection, "initial"));
 
   if (options.runtimeTicks > 0) {
@@ -59,7 +60,7 @@ try {
     let lastTicks = startTicks;
 
     while (Date.now() < deadline) {
-      inspection = await getInspection(options.builderPort);
+      inspection = await getInspection(options.builderPort, plan);
       const elapsed = inspection.park.date.ticksElapsed - startTicks;
       lastTicks = inspection.park.date.ticksElapsed;
       if (inspection.park.crashes.length > 0 || elapsed >= options.runtimeTicks) {
@@ -68,7 +69,7 @@ try {
       await delay(options.pollMs);
     }
 
-    inspection = await getInspection(options.builderPort);
+    inspection = await getInspection(options.builderPort, plan);
     const elapsed = inspection.park.date.ticksElapsed - startTicks;
     if (elapsed < options.runtimeTicks) {
       issues.push(
@@ -216,8 +217,59 @@ async function waitForBuilder(port, timeoutMs) {
   throw new Error(`builder plugin did not answer on 127.0.0.1:${port} within ${timeoutMs}ms`);
 }
 
-async function getInspection(port) {
-  return fetchJson(port, "/inspect");
+async function getInspection(port, plan) {
+  const inspection = await postJson(port, "/inspect", { footpaths: [] });
+  const coords = inspectionFootpathCoords(plan, inspection.park.rides ?? []);
+  inspection.park.footpaths = await fetchInspectionFootpaths(port, coords);
+  return inspection;
+}
+
+async function fetchInspectionFootpaths(port, coords) {
+  const footpaths = [];
+  for (let index = 0; index < coords.length; index += FOOTPATH_BATCH_SIZE) {
+    const batch = coords.slice(index, index + FOOTPATH_BATCH_SIZE);
+    const response = await postJson(port, "/inspect-footpaths", { footpaths: batch });
+    footpaths.push(...(response.footpaths ?? []));
+  }
+  return dedupeFootpaths(footpaths);
+}
+
+function inspectionFootpathCoords(plan, actualRides) {
+  const coords = new Map();
+  const add = (coord) => {
+    coords.set(xyKey(coord), { x: coord.x, y: coord.y });
+  };
+
+  add(plan.park.entrance);
+  for (const pathEdge of plan.paths ?? []) {
+    for (const waypoint of pathEdge.waypoints ?? []) {
+      add(waypoint);
+    }
+  }
+
+  for (const expected of plan.rides ?? []) {
+    const rawVisual = Array.isArray(expected.track) && expected.track.some((segment) => segment.raw === true);
+    if (rawVisual) {
+      continue;
+    }
+    const actual = actualRides.find((ride) => ride.name === expected.id || ride.name.startsWith(`${expected.id} `));
+    if (actual === undefined) {
+      continue;
+    }
+    for (const access of actualAccessPathTiles(actual, plan)) {
+      add(access.tile);
+    }
+  }
+
+  return [...coords.values()];
+}
+
+function dedupeFootpaths(footpaths) {
+  const byKey = new Map();
+  for (const footpath of footpaths) {
+    byKey.set(pathKey(footpath), footpath);
+  }
+  return [...byKey.values()];
 }
 
 async function postJson(port, path, body) {
@@ -246,8 +298,17 @@ async function fetchJson(port, path) {
 function validateInspection(plan, inspection, phase) {
   const phaseIssues = [];
   const actualRides = inspection.park.rides ?? [];
-  const footpathTiles = new Set((inspection.park.footpaths ?? []).map((footpath) => coordKey(footpath)));
-  const reachable = reachablePathTiles(footpathTiles, plan.park.entrance);
+  const footpaths = (inspection.park.footpaths ?? []).map((footpath) => normalizeInspectionCoord(footpath, plan));
+  const footpathsByXY = pathTilesByXY(footpaths);
+  const footpathTiles = new Set(footpaths.map((footpath) => coordKey(footpath)));
+  const entranceTiles = footpaths.filter(
+    (footpath) => footpath.x === plan.park.entrance.x && footpath.y === plan.park.entrance.y
+  );
+  const reachable = reachablePathTiles(footpaths, entranceTiles);
+
+  if (entranceTiles.length === 0) {
+    phaseIssues.push(`${phase}: no accepted footpath at park entrance ${xyKey(plan.park.entrance)}`);
+  }
 
   if ((inspection.park.crashes ?? []).length > 0) {
     for (const crash of inspection.park.crashes) {
@@ -271,13 +332,17 @@ function validateInspection(plan, inspection, phase) {
       phaseIssues.push(`${phase}: ride ${expected.id} is missing an entrance or exit`);
     }
     if (!rawVisual) {
-      for (const isExit of [false, true]) {
-        const tile = entranceExitPathTile(expected, isExit, plan);
-        const label = isExit ? "exit" : "entrance";
+      for (const access of actualAccessPathTiles(actual, plan)) {
+        const tile = access.tile;
+        const candidates = (footpathsByXY.get(xyKey(tile)) ?? []).filter((footpath) => footpath.z === tile.z);
         if (!footpathTiles.has(coordKey(tile))) {
-          phaseIssues.push(`${phase}: ride ${expected.id} ${label} path tile was not accepted by OpenRCT2 at ${coordKey(tile)}`);
-        } else if (!reachable.has(coordKey(tile))) {
-          phaseIssues.push(`${phase}: ride ${expected.id} ${label} path tile is not connected to the main path at ${coordKey(tile)}`);
+          phaseIssues.push(
+            `${phase}: ride ${expected.id} ${access.label} path tile was not accepted by OpenRCT2 at ${coordKey(tile)}`
+          );
+        } else if (!candidates.some((candidate) => reachable.has(pathKey(candidate)))) {
+          phaseIssues.push(
+            `${phase}: ride ${expected.id} ${access.label} path tile is not connected to the main path at ${coordKey(tile)}`
+          );
         }
       }
     }
@@ -285,8 +350,11 @@ function validateInspection(plan, inspection, phase) {
 
   for (const pathEdge of plan.paths ?? []) {
     for (const waypoint of pathEdge.waypoints ?? []) {
-      if (!footpathTiles.has(coordKey(waypoint))) {
-        phaseIssues.push(`${phase}: planned path tile was not accepted by OpenRCT2 at ${coordKey(waypoint)}`);
+      const candidates = footpathsByXY.get(xyKey(waypoint)) ?? [];
+      if (candidates.length === 0) {
+        phaseIssues.push(`${phase}: planned path tile was not accepted by OpenRCT2 at ${xyKey(waypoint)}`);
+      } else if (!candidates.some((candidate) => reachable.has(pathKey(candidate)))) {
+        phaseIssues.push(`${phase}: planned path tile is not connected to the main path at ${xyKey(waypoint)}`);
       }
     }
   }
@@ -298,25 +366,105 @@ function hasEntranceAndExit(ride) {
   return (ride.stations ?? []).some((station) => station.entrance !== null && station.exit !== null);
 }
 
-function reachablePathTiles(pathTiles, entrance) {
-  const start = { x: entrance.x, y: entrance.y };
+function actualAccessPathTiles(ride, plan) {
+  const tiles = [];
+  for (const station of ride.stations ?? []) {
+    if (station.entrance !== null) {
+      tiles.push({ label: "entrance", tile: accessPathTile(station.entrance, plan) });
+    }
+    if (station.exit !== null) {
+      tiles.push({ label: "exit", tile: accessPathTile(station.exit, plan) });
+    }
+  }
+  return tiles;
+}
+
+function accessPathTile(access, plan) {
+  const location = normalizeInspectionCoord(access, plan);
+  const delta = directionDelta(normalizeDirection(location.direction ?? 0));
+  return clampPoint(
+    {
+      x: location.x - delta.x,
+      y: location.y - delta.y,
+      z: location.z
+    },
+    plan.park.size.width,
+    plan.park.size.height
+  );
+}
+
+function normalizeInspectionCoord(coord, plan) {
+  const width = plan.park.size.width;
+  const height = plan.park.size.height;
+  const x = coord.x >= width ? Math.floor(coord.x / 32) : coord.x;
+  const y = coord.y >= height ? Math.floor(coord.y / 32) : coord.y;
+  return {
+    ...coord,
+    x,
+    y,
+    z: coord.z ?? 0
+  };
+}
+
+function reachablePathTiles(footpaths, entranceTiles) {
+  const pathTiles = new Set(footpaths.map((footpath) => pathKey(footpath)));
+  const byXY = pathTilesByXY(footpaths);
+
   const visited = new Set();
-  const queue = [start];
+  const queue = [...entranceTiles];
   while (queue.length > 0) {
     const point = queue.shift();
     if (point === undefined) {
       continue;
     }
-    const key = coordKey(point);
+    const key = pathKey(point);
     if (visited.has(key) || !pathTiles.has(key)) {
       continue;
     }
     visited.add(key);
-    for (const delta of [{ x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }]) {
-      queue.push({ x: point.x + delta.x, y: point.y + delta.y });
+    for (const direction of [0, 1, 2, 3]) {
+      const delta = directionDelta(direction);
+      const candidates = byXY.get(xyKey({ x: point.x + delta.x, y: point.y + delta.y })) ?? [];
+      for (const candidate of candidates) {
+        if (pathTilesConnect(point, candidate, direction)) {
+          queue.push(candidate);
+        }
+      }
     }
   }
   return visited;
+}
+
+function pathTilesByXY(footpaths) {
+  const byXY = new Map();
+  for (const footpath of footpaths) {
+    const key = xyKey(footpath);
+    const candidates = byXY.get(key) ?? [];
+    candidates.push(footpath);
+    byXY.set(key, candidates);
+  }
+  return byXY;
+}
+
+function pathTilesConnect(from, to, direction) {
+  const fromEdgeZ = pathEdgeZ(from, direction);
+  const toEdgeZ = pathEdgeZ(to, oppositeDirection(direction));
+  return fromEdgeZ !== null && toEdgeZ !== null && fromEdgeZ === toEdgeZ;
+}
+
+function pathEdgeZ(path, direction) {
+  if (path.slopeDirection === null || path.slopeDirection === undefined) {
+    return path.z;
+  }
+  const uphill = normalizeDirection(path.slopeDirection);
+  if (direction === uphill) {
+    return path.z + 16;
+  }
+  return path.z;
+}
+
+function oppositeDirection(direction) {
+  return normalizeDirection(direction + 2);
 }
 
 function entranceExitPathTile(ride, isExit, plan) {
@@ -433,12 +581,21 @@ function normalizeDirection(direction) {
 
 function clampPoint(point, width, height) {
   return {
+    ...point,
     x: Math.max(0, Math.min(width - 1, point.x)),
     y: Math.max(0, Math.min(height - 1, point.y))
   };
 }
 
 function coordKey(coord) {
+  return `${coord.x},${coord.y},${coord.z ?? 0}`;
+}
+
+function pathKey(coord) {
+  return `${coordKey(coord)},${coord.slopeDirection ?? "flat"}`;
+}
+
+function xyKey(coord) {
   return `${coord.x},${coord.y}`;
 }
 

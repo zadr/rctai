@@ -92,6 +92,11 @@ namespace RctaiBuilder {
       this.actions.push({ action: "rawtrack", args: args as unknown as Record<string, unknown> });
     }
 
+    clearPathsAndScenery(callback: (result: RctaiBuilder.GameActionResultLike) => void): void {
+      this.actions.push({ action: "clearPathsAndScenery", args: {} });
+      callback({});
+    }
+
     getExistingRideIds(): number[] {
       return [...this.rideIds];
     }
