@@ -11,7 +11,8 @@ Required input:
   <input.park>                 Existing built/saved OpenRCT2 park file.
 
 Output:
-  -o, --output <output.png>    PNG path to write. Defaults to <input>.png.
+  -o, --output <output.png>    PNG path to write. Defaults to rct-park-<timestamp>.png
+                               next to the input park.
 
 OpenRCT2:
   --openrct2 <binary>          OpenRCT2 CLI binary or absolute path.
@@ -304,7 +305,14 @@ if [[ ! -f $input_path ]]; then
 fi
 
 if [[ -z $output_path ]]; then
-  output_path=${input_path%.*}.png
+  output_dir=$(dirname "$input_path")
+  timestamp=$(date +%Y%m%d-%H%M%S)
+  output_path=$output_dir/rct-park-$timestamp.png
+  suffix=1
+  while [[ -e $output_path ]]; do
+    output_path=$output_dir/rct-park-$timestamp-$suffix.png
+    suffix=$((suffix + 1))
+  done
 fi
 if [[ -z $output_path ]]; then
   die "output path must not be empty"
