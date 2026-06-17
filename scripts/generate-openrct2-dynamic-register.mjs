@@ -121,9 +121,10 @@ const TRACK_META = {
 
 const plan = readJson(path.resolve(repoRoot, inputPath));
 const workModel = readOptionalJson(path.resolve(repoRoot, workModelPath));
+const coalescedRides = coalesceRepeatedPrRides(plan.rides, workModel);
 const relationshipIndex = buildRelationshipIndex(workModel);
-const rideRelations = resolveRideRelations(plan.rides, relationshipIndex);
-const prepared = plan.rides.map((ride, index) => prepareRide(ride, index, rideRelations.get(ride.id) ?? fallbackRelation(ride, index)));
+const rideRelations = resolveRideRelations(coalescedRides, relationshipIndex);
+const prepared = coalescedRides.map((ride, index) => prepareRide(ride, index, rideRelations.get(ride.id) ?? fallbackRelation(ride, index)));
 const placed = placeRides(prepared);
 
 const output = {
@@ -146,6 +147,7 @@ fs.mkdirSync(path.dirname(path.resolve(repoRoot, outputPath)), { recursive: true
 fs.writeFileSync(path.resolve(repoRoot, outputPath), `${JSON.stringify(output, null, 2)}\n`);
 console.log(`wrote ${outputPath}`);
 console.log(`rides ${output.rides.length}, park ${PARK_WIDTH}x${PARK_HEIGHT}`);
+console.log(`coalesced repeated PR transcript rides ${plan.rides.length} -> ${coalescedRides.length}`);
 console.log(`track pieces ${output.rides.reduce((sum, ride) => sum + (ride.track?.length ?? 0), 0)}`);
 console.log(
   `paths ${output.paths.length}, path tiles ${output.paths.reduce((sum, pathEdge) => sum + (pathEdge.waypoints?.length ?? 0), 0)}, connected track circuits ${closedCircuitRideCount(output.rides)}`
@@ -160,6 +162,190 @@ function readOptionalJson(filePath) {
     return null;
   }
   return readJson(filePath);
+}
+
+function coalesceRepeatedPrRides(rides, workModel) {
+  const workById = new Map((workModel?.prs ?? []).map((work) => [work.id, work]));
+  const groups = new Map();
+
+  rides.forEach((ride, index) => {
+    const work = workById.get(ride.id) ?? null;
+    const key = work?.number === null || work?.number === undefined ? `ride:${ride.id}` : `pr:${work.number}`;
+    const group = groups.get(key) ?? { key, entries: [], firstIndex: index };
+    group.entries.push({ ride, work, index });
+    group.firstIndex = Math.min(group.firstIndex, index);
+    groups.set(key, group);
+  });
+
+  return [...groups.values()]
+    .sort((left, right) => left.firstIndex - right.firstIndex)
+    .map((group) => {
+      if (group.entries.length === 1) {
+        const entry = group.entries[0];
+        return { ...entry.ride, __work: entry.work };
+      }
+      return coalesceRideGroup(group);
+    });
+}
+
+function coalesceRideGroup(group) {
+  const primary = choosePrimaryRideEntry(group.entries);
+  const work = mergeWorks(group.entries);
+  const axes = evolvedAxes(group.entries, work);
+  const count = group.entries.length;
+  const ride = primary.ride;
+
+  return {
+    ...ride,
+    id: work.id,
+    name: evolvedName(ride.name, work, count),
+    axes,
+    sign: evolvedSign(ride.sign, work, count),
+    __work: work,
+    __evolution: {
+      count,
+      sourceRideIds: group.entries.map((entry) => entry.ride.id).sort(),
+      sessionIds: group.entries
+        .map((entry) => entry.work?.session?.sessionId)
+        .filter((sessionId) => typeof sessionId === "string")
+        .sort()
+    }
+  };
+}
+
+function choosePrimaryRideEntry(entries) {
+  return [...entries].sort((left, right) => {
+    const scoreDelta = rideComplexityScore(right.ride, right.work) - rideComplexityScore(left.ride, left.work);
+    if (scoreDelta !== 0) {
+      return scoreDelta;
+    }
+    return left.index - right.index;
+  })[0];
+}
+
+function rideComplexityScore(ride, work) {
+  const axes = ride.axes ?? {};
+  return (
+    Number(axes.size ?? 0) * 4 +
+    Number(axes.adventure ?? 0) * 2 +
+    Number(axes.risk ?? 0) * 2 +
+    Math.log2(1 + Number(work?.additions ?? 0) + Number(work?.deletions ?? 0))
+  );
+}
+
+function mergeWorks(entries) {
+  const works = entries.map((entry) => entry.work).filter(Boolean);
+  const primary = entries[0]?.work ?? works[0] ?? {};
+  const number = primary.number ?? null;
+  const sessionIds = works
+    .map((work) => work.session?.sessionId)
+    .filter((sessionId) => typeof sessionId === "string")
+    .sort();
+  const session = mergeSessions(works, sessionIds);
+
+  return {
+    ...primary,
+    id: number === null || number === undefined ? primary.id ?? entries[0]?.ride.id : `PR-${number}`,
+    number,
+    title: titleForMergedWork(works, primary),
+    author: dominantString(works.map((work) => work.author)) ?? primary.author ?? "claude",
+    state: dominantString(works.map((work) => work.state)) ?? primary.state ?? "open",
+    createdAt: minIso(works.map((work) => work.createdAt)) ?? primary.createdAt ?? null,
+    mergedAt: maxIso(works.map((work) => work.mergedAt)) ?? primary.mergedAt ?? null,
+    durationHours: sumNumbers(works.map((work) => work.durationHours)),
+    commits: sumNumbers(works.map((work) => work.commits)),
+    filesChanged: sumNumbers(works.map((work) => work.filesChanged)),
+    newFiles: sumNumbers(works.map((work) => work.newFiles)),
+    additions: sumNumbers(works.map((work) => work.additions)),
+    deletions: sumNumbers(works.map((work) => work.deletions)),
+    languages: sumRecords(works.map((work) => work.languages)),
+    categories: averageRecords(works.map((work) => work.categories)),
+    signals: mergeSignals(works.map((work) => work.signals)),
+    session
+  };
+}
+
+function mergeSessions(works, sessionIds) {
+  const sessions = works.map((work) => work.session).filter(Boolean);
+  if (sessions.length === 0) {
+    return null;
+  }
+
+  return {
+    sessionId: sessionIds.length === 0 ? `${sessions.length} sessions` : sessionIds.join("+"),
+    durationMinutes: sumNumbers(sessions.map((session) => session.durationMinutes)),
+    userTurns: sumNumbers(sessions.map((session) => session.userTurns)),
+    toolCalls: sumNumbers(sessions.map((session) => session.toolCalls)),
+    edits: sumNumbers(sessions.map((session) => session.edits)),
+    bashCalls: sumNumbers(sessions.map((session) => session.bashCalls)),
+    errors: sumNumbers(sessions.map((session) => session.errors)),
+    retries: sumNumbers(sessions.map((session) => session.retries))
+  };
+}
+
+function mergeSignals(signals) {
+  const records = signals.filter(Boolean);
+  return {
+    touchesTests: records.some((signal) => signal.touchesTests === true),
+    touchesConfig: records.some((signal) => signal.touchesConfig === true),
+    touchesDocs: records.some((signal) => signal.touchesDocs === true),
+    codeTouchedNoTests: records.some((signal) => signal.codeTouchedNoTests === true),
+    hasRevert: records.some((signal) => signal.hasRevert === true),
+    forcePush: records.some((signal) => signal.forcePush === true),
+    netDeletion: records.length > 0 && records.every((signal) => signal.netDeletion === true),
+    hotFiles: unique(records.flatMap((signal) => signal.hotFiles ?? [])).sort(),
+    reviewCount: sumNumbers(records.map((signal) => signal.reviewCount)),
+    approvals: sumNumbers(records.map((signal) => signal.approvals))
+  };
+}
+
+function evolvedAxes(entries, work) {
+  const axesList = entries.map((entry) => entry.ride.axes ?? {});
+  const countBoost = Math.log2(entries.length) / 8;
+  const churnBoost = Math.min(0.1, Math.log2(1 + work.additions + work.deletions) / 220);
+  const session = work.session;
+  const errorPressure =
+    session === null || session === undefined ? 0 : (session.errors + session.retries) / Math.max(session.userTurns, 1);
+
+  return {
+    size: roundAxis(Math.max(...axesList.map((axes) => Number(axes.size ?? 0.5))) + countBoost + churnBoost),
+    adventure: roundAxis(Math.max(...axesList.map((axes) => Number(axes.adventure ?? 0.5))) + countBoost * 0.65),
+    risk: roundAxis(Math.max(...axesList.map((axes) => Number(axes.risk ?? 0.5))) + countBoost * 0.5 + errorPressure * 0.08)
+  };
+}
+
+function evolvedName(name, work, count) {
+  const prefix = work.number === null || work.number === undefined ? name : `PR #${work.number}`;
+  return `${prefix} x${count}`.slice(0, 31);
+}
+
+function evolvedSign(sign, work, count) {
+  const sessionText = count === 1 ? "1 transcript" : `${count} transcripts`;
+  const base = sign ?? `${work.id} - ${work.title}`;
+  return `${base} EVOLVED ${sessionText}`;
+}
+
+function titleForMergedWork(works, primary) {
+  const titled = works
+    .map((work) => work.title)
+    .filter((title) => typeof title === "string" && title.trim().length > 0)
+    .sort((left, right) => cleanedTitleScore(right) - cleanedTitleScore(left) || left.length - right.length);
+  return titled[0] ?? primary.title ?? "Transcript work";
+}
+
+function cleanedTitleScore(title) {
+  const normalized = title.toLowerCase();
+  let score = 0;
+  if (!normalized.includes("you're picking up")) {
+    score += 2;
+  }
+  if (normalized.includes("posprint")) {
+    score += 3;
+  }
+  if (normalized.includes("rebase")) {
+    score -= 2;
+  }
+  return score;
 }
 
 function prepareRide(ride, index, relation) {
@@ -213,17 +399,22 @@ function prepareFlatRide(ride, axes, index, relation) {
 function prepareDynamicTrackRide(ride, axes, index, relation) {
   const seed = hash(`${ride.id}:${ride.name}:dynamic-track`);
   const clustered = relation.clusterSize > 1;
+  const evolutionCount = Math.max(1, relation.evolutionCount ?? 1);
+  const evolutionBoost = Math.min(1, Math.log2(evolutionCount) / 3);
   const stationLength = Math.max(3, Math.min(6, Math.round(3 + axes.size * 3)));
-  const sideA = stationLength + 6 + Math.round(axes.size * (clustered ? 6 : 10) + seeded(seed, 1) * 5);
-  const sideB = 5 + Math.round(axes.adventure * (clustered ? 6 : 8) + seeded(seed, 2) * 5);
+  const sideA =
+    stationLength + 6 + Math.round(axes.size * (clustered ? 6 : 10) + seeded(seed, 1) * 5 + evolutionBoost * 10);
+  const sideB = 5 + Math.round(axes.adventure * (clustered ? 6 : 8) + seeded(seed, 2) * 5 + evolutionBoost * 6);
   const turnFamily = axes.risk > 0.48 || seeded(seed, 3) > 0.35 ? "turn5" : "turn3";
   const turnClockwise = seeded(seed, 4) > 0.42;
   const turnType = turnTypeFor(turnFamily, turnClockwise);
   const rotation = normalizeDirection(relation.memberIndex + relation.clusterOrdinal + index);
   const visualRideType = visualRideTypeFor(ride, axes, relation);
-  const allowLoop = canUseRenderedVerticalLoop(ride, visualRideType) && (clustered || (axes.adventure > 0.55 && axes.risk > 0.35));
-  const hillHeight = Math.max(1, Math.min(3, Math.round(1 + axes.size * 2.5)));
-  const variant = Math.abs(hash(`${relation.clusterKey}:${relation.memberIndex}:${ride.id}`)) % 5;
+  const allowLoop =
+    canUseRenderedVerticalLoop(ride, visualRideType) &&
+    (clustered || evolutionCount > 1 || (axes.adventure > 0.55 && axes.risk > 0.35));
+  const hillHeight = Math.max(1, Math.min(4, Math.round(1 + axes.size * 2.5 + evolutionBoost)));
+  const variant = Math.abs(hash(`${relation.clusterKey}:${relation.memberIndex}:${ride.id}:${evolutionCount}`)) % 5;
 
   const track = buildDynamicTrack({
     ride,
@@ -326,11 +517,11 @@ function connectedSideCandidates(role, { ride, axes, seed, hillHeight, allowLoop
     candidates.push(buildLiftDrop(axes, hillHeight, 10 + hillHeight * 2));
   }
 
-  if (allowLoop && (role === "front" || role === "back" || relation.clusterSize > 2)) {
+  if (allowLoop && (role === "front" || role === "back" || relation.clusterSize > 2 || (relation.evolutionCount ?? 1) > 2)) {
     candidates.push(buildLoopPortal(seed, axes, relation));
   }
 
-  if (role !== "final" && relation.clusterSize > 1) {
+  if (role !== "final" && Math.max(relation.clusterSize ?? 1, relation.evolutionCount ?? 1) > 1) {
     candidates.push(buildClusterPass(ride, 8, axes, seed + 9, relation));
   }
 
@@ -349,7 +540,7 @@ function buildLoopPortal(seed, axes, relation) {
   const first = seeded(seed, 90) > 0.5 ? LEFT_LOOP : RIGHT_LOOP;
   const second = first === LEFT_LOOP ? RIGHT_LOOP : LEFT_LOOP;
   const pieces = [...buildVerticalLoop(first), ...repeat(FLAT, 1), ...buildVerticalLoop(second)];
-  if (relation.clusterSize > 2 || axes.risk > 0.55) {
+  if ((relation.evolutionCount ?? 1) > 2 || relation.clusterSize > 2 || axes.risk > 0.55) {
     pieces.push(...repeat(FLAT, 2), ...buildVerticalLoop(second), ...repeat(FLAT, 1), ...buildVerticalLoop(first));
   }
   return pieces;
@@ -362,12 +553,13 @@ function buildVerticalLoop(type) {
 function buildClusterPass(ride, length, axes, seed, relation) {
   const pieces = [];
   const isTransport = ride.family === "transport";
-  if (!isTransport && relation.clusterSize > 1 && axes.risk > 0.35) {
+  const relatedCount = Math.max(relation.clusterSize ?? 1, relation.evolutionCount ?? 1);
+  if (!isTransport && relatedCount > 1 && axes.risk > 0.35) {
     pieces.push({ type: BOOSTER, brakeSpeed: 0 });
   }
-  pieces.push(...repeat(FLAT, Math.max(2, length)));
-  if (relation.clusterSize > 1) {
-    pieces.push(...buildWiggle(seeded(seed, 92) > 0.5, 1 + (relation.memberIndex % 3)));
+  pieces.push(...repeat(FLAT, Math.max(2, length + Math.min(5, relatedCount - 1))));
+  if (relatedCount > 1) {
+    pieces.push(...buildWiggle(seeded(seed, 92) > 0.5, 1 + ((relation.memberIndex + relatedCount) % 3)));
   }
   return pieces;
 }
@@ -1109,7 +1301,8 @@ function resolveRideRelations(rides, relationshipIndex) {
         clusterSize: group.length,
         memberIndex,
         clusterOrdinal: ordinals.get(key) ?? 0,
-        originalIndex: entry.index
+        originalIndex: entry.index,
+        evolutionCount: entry.ride.__evolution?.count ?? 1
       });
     }
   }
@@ -1117,12 +1310,12 @@ function resolveRideRelations(rides, relationshipIndex) {
 }
 
 function chooseRelationKey(ride, relationshipIndex) {
-  const work = relationshipIndex.workById.get(ride.id);
+  const work = ride.__work ?? relationshipIndex.workById.get(ride.id);
   if (work === undefined) {
     return `family:${ride.family ?? ride.archetype ?? "ride"}`;
   }
 
-  const candidates = relationshipIndex.candidatesById.get(ride.id) ?? [];
+  const candidates = relationshipIndex.candidatesById.get(ride.id) ?? relationCandidates(work);
   const exact = candidates.find(
     (candidate) =>
       (candidate.startsWith("pr:") || candidate.startsWith("module:") || candidate.startsWith("topic:")) &&
@@ -1218,7 +1411,7 @@ function visualRideTypeFor(ride, axes, relation) {
   }
   if (
     ride.family?.startsWith("coaster") === true &&
-    relation.clusterSize > 1 &&
+    Math.max(relation.clusterSize ?? 1, relation.evolutionCount ?? 1) > 1 &&
     !canUseVerticalLoop(ride) &&
     axes.adventure + axes.risk > 1.15 &&
     relation.memberIndex % 3 === 0
@@ -1242,13 +1435,16 @@ function fallbackRelation(ride, index) {
     clusterSize: 1,
     memberIndex: 0,
     clusterOrdinal: index,
-    originalIndex: index
+    originalIndex: index,
+    evolutionCount: ride.__evolution?.count ?? 1
   };
 }
 
 function stripLayoutHints(ride) {
   const clean = { ...ride };
   delete clean.__layout;
+  delete clean.__work;
+  delete clean.__evolution;
   if (Array.isArray(clean.track)) {
     clean.track = clean.track.map((segment) => {
       const rest = { ...segment };
@@ -1262,6 +1458,55 @@ function stripLayoutHints(ride) {
 
 function unique(values) {
   return [...new Set(values)];
+}
+
+function dominantString(values) {
+  const counts = new Map();
+  for (const value of values) {
+    if (typeof value !== "string" || value.trim().length === 0) {
+      continue;
+    }
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0]?.[0] ?? null;
+}
+
+function sumNumbers(values) {
+  return values.reduce((sum, value) => sum + (Number.isFinite(Number(value)) ? Number(value) : 0), 0);
+}
+
+function sumRecords(records) {
+  const result = {};
+  for (const record of records) {
+    for (const [key, value] of Object.entries(record ?? {})) {
+      result[key] = (result[key] ?? 0) + (Number.isFinite(Number(value)) ? Number(value) : 0);
+    }
+  }
+  return result;
+}
+
+function averageRecords(records) {
+  const totals = sumRecords(records);
+  const denominator = Math.max(1, records.filter(Boolean).length);
+  return Object.fromEntries(Object.entries(totals).map(([key, value]) => [key, Number(value) / denominator]));
+}
+
+function minIso(values) {
+  return sortedIso(values)[0] ?? null;
+}
+
+function maxIso(values) {
+  return sortedIso(values).at(-1) ?? null;
+}
+
+function sortedIso(values) {
+  return values
+    .filter((value) => typeof value === "string" && Number.isFinite(Date.parse(value)))
+    .sort((left, right) => Date.parse(left) - Date.parse(right));
+}
+
+function roundAxis(value) {
+  return Math.round(clamp(value) * 1000) / 1000;
 }
 
 function repeat(type, count) {
