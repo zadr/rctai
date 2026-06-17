@@ -815,6 +815,7 @@ function canUseRenderedVerticalLoop(ride, visualRideType) {
 
 function placeRides(rides) {
   const placed = [];
+  const occupiedTrackKeys = new Map();
   const centerX = Math.floor(PARK_WIDTH / 2);
   const centerY = Math.floor(PARK_HEIGHT / 2) + 14;
   const clusters = clusterRides(rides);
@@ -826,18 +827,79 @@ function placeRides(rides) {
       const hint = ride.__layout ?? fallbackRelation(ride, 0);
       const offset = clusterMemberOffset(hint, ride);
       const anchor = hint.anchor ?? { x: Math.floor(ride.footprint.w / 2), y: Math.floor(ride.footprint.h / 2) };
-      const position = clampPosition(
+      const basePosition = clampPosition(
         {
           x: Math.round(center.x - anchor.x + offset.x),
           y: Math.round(center.y - anchor.y + offset.y)
         },
         ride.footprint
       );
-      placed.push({ ...ride, position });
+      const position = chooseNonCollidingPosition(ride, basePosition, occupiedTrackKeys);
+      const placedRide = { ...ride, position };
+      reserveTrackKeys(placedRide, occupiedTrackKeys);
+      placed.push(placedRide);
     }
   }
 
   return placed;
+}
+
+function chooseNonCollidingPosition(ride, basePosition, occupiedTrackKeys) {
+  if (!requiresClosedTrackCircuit({ ...ride, position: basePosition })) {
+    return basePosition;
+  }
+
+  const seed = hash(`${ride.id}:${ride.name}:placement-search`);
+  const seen = new Set();
+  for (const candidate of placementCandidates(basePosition, ride.footprint, seed)) {
+    const key = `${candidate.x},${candidate.y}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    const collisions = trackKeysForRideAt(ride, candidate).filter((trackKey) => occupiedTrackKeys.has(trackKey));
+    if (collisions.length === 0) {
+      return candidate;
+    }
+  }
+
+  return basePosition;
+}
+
+function* placementCandidates(basePosition, footprint, seed) {
+  yield basePosition;
+  for (let radius = 8; radius <= 150; radius += 6) {
+    const steps = Math.max(12, Math.round(radius / 2));
+    for (let step = 0; step < steps; step += 1) {
+      const angle = (Math.PI * 2 * step) / steps + seeded(seed, radius * 101 + step) * 0.22;
+      yield clampPosition(
+        {
+          x: Math.round(basePosition.x + Math.cos(angle) * radius),
+          y: Math.round(basePosition.y + Math.sin(angle) * radius * 0.82)
+        },
+        footprint
+      );
+    }
+  }
+}
+
+function reserveTrackKeys(ride, occupiedTrackKeys) {
+  for (const trackKey of trackKeysForRideAt(ride, ride.position)) {
+    occupiedTrackKeys.set(trackKey, ride.id);
+  }
+}
+
+function trackKeysForRideAt(ride, position) {
+  if (!requiresClosedTrackCircuit({ ...ride, position })) {
+    return [];
+  }
+  const keys = [];
+  let cursor = absoluteTrackStartCursor({ ...ride, position });
+  for (const segment of ride.track) {
+    keys.push(`${cursor.x},${cursor.y},${cursor.z},d${cursor.direction},t${segment.type}`);
+    cursor = advance(cursor, TRACK_META[segment.type]);
+  }
+  return keys;
 }
 
 function clusterRides(rides) {
@@ -880,9 +942,10 @@ function clusterMemberOffset(hint, ride) {
   }
   const seed = hash(`${hint.clusterKey}:${ride.id}:member-offset`);
   const angle = hint.memberIndex * GOLDEN_ANGLE + seeded(seed, 601) * 0.55;
-  const ring = Math.floor(hint.memberIndex / 5);
-  const roleScale = hint.role === "flat" || hint.role === "tower" ? 4 : 7;
-  const radius = 2 + ring * roleScale + seeded(seed, 602) * 3;
+  const footprintScale = Math.max(ride.footprint.w, ride.footprint.h);
+  const roleScale = hint.role === "flat" || hint.role === "tower" ? 0.45 : 0.72;
+  const spacing = Math.max(8, Math.min(28, footprintScale * roleScale));
+  const radius = spacing * Math.sqrt(hint.memberIndex + 1) + seeded(seed, 602) * 5;
   return {
     x: Math.round(Math.cos(angle) * radius),
     y: Math.round(Math.sin(angle) * radius * 0.82)
@@ -1148,6 +1211,7 @@ function validateGeneratedPlan(generated) {
     ...validatePathGraph(generated),
     ...validatePhysicalPathNetwork(generated),
     ...validatePaintedTrackPieces(generated.rides),
+    ...validateGeneratedTrackKeyCollisions(generated.rides),
     ...validateClosedTrackCircuits(generated.rides)
   ];
 
@@ -1166,6 +1230,44 @@ function validatePaintedTrackPieces(rides) {
     }
   }
   return issues;
+}
+
+function validateGeneratedTrackKeyCollisions(rides) {
+  const issues = [];
+  const seen = new Map();
+  for (const ride of rides ?? []) {
+    if (!requiresClosedTrackCircuit(ride)) {
+      continue;
+    }
+    let cursor = absoluteTrackStartCursor(ride);
+    for (let index = 0; index < ride.track.length; index += 1) {
+      const segment = ride.track[index];
+      const key = `${cursor.x},${cursor.y},${cursor.z},d${cursor.direction},t${segment.type}`;
+      const previous = seen.get(key);
+      if (previous !== undefined && previous.rideId !== ride.id) {
+        issues.push(
+          `${ride.id} track segment ${index} collides with ${previous.rideId} segment ${previous.index} at ${key}`
+        );
+      } else {
+        seen.set(key, { rideId: ride.id, index });
+      }
+      cursor = advance(cursor, TRACK_META[segment.type]);
+    }
+  }
+  return issues;
+}
+
+function absoluteTrackStartCursor(ride) {
+  const first = ride.track[0] ?? {};
+  if (first.type !== BEGIN_STATION) {
+    throw new Error(`${ride.id} generated circuit must start with begin station`);
+  }
+  return {
+    x: ride.position.x + (first.x ?? 0),
+    y: ride.position.y + (first.y ?? 0),
+    z: first.z ?? BASE_Z,
+    direction: normalizeDirection(first.direction ?? ride.rotation ?? 0)
+  };
 }
 
 function validatePathGraph(generated) {

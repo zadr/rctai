@@ -193,6 +193,36 @@ namespace RctaiBuilder {
     rides: ParkInspectionRide[];
     footpaths: ParkInspectionFootpath[];
     crashes: RuntimeCrashEvent[];
+    messages: ParkInspectionMessage[];
+    guests: ParkInspectionGuest[];
+  }
+
+  export interface ParkInspectionMessage {
+    text: string;
+    type: string;
+    subject?: number;
+    month: number;
+    day: number;
+    tickCount: number;
+    isArchived: boolean;
+  }
+
+  export interface ParkInspectionGuest {
+    id: number | null;
+    name: string;
+    x: number;
+    y: number;
+    z: number;
+    isLost: boolean;
+    lostCountdown: number;
+    thoughts: ParkInspectionGuestThought[];
+  }
+
+  export interface ParkInspectionGuestThought {
+    type: string;
+    item: number;
+    freshness: number;
+    text: string;
   }
 
   export interface ParkInspectionRide {

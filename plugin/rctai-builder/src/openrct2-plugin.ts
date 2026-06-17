@@ -173,6 +173,8 @@ namespace RctaiBuilder {
 
     clearPathsAndScenery(callback: (result: RctaiBuilder.GameActionResultLike) => void): void {
       try {
+        removeEntities("guest");
+        removeEntities("staff");
         for (let x = 0; x < map.size.x; x += 1) {
           for (let y = 0; y < map.size.y; y += 1) {
             const tile = map.getTile(x, y);
@@ -228,7 +230,9 @@ namespace RctaiBuilder {
             }))
         })),
         footpaths: inspectFootpaths(),
-        crashes: this.crashEvents.slice()
+        crashes: this.crashEvents.slice(),
+        messages: inspectParkMessages(),
+        guests: inspectGuestProblems()
       };
     }
 
@@ -450,6 +454,7 @@ namespace RctaiBuilder {
         const tile = map.getTile(x, y);
         for (const element of tile.elements) {
           if (element.type === "footpath") {
+            const isQueue = element.isQueue;
             footpaths.push({
               x,
               y,
@@ -457,16 +462,73 @@ namespace RctaiBuilder {
               edges: element.edges,
               corners: element.corners,
               slopeDirection: element.slopeDirection,
-              isQueue: element.isQueue,
-              queueBannerDirection: element.queueBannerDirection,
-              ride: element.ride,
-              station: element.station
+              isQueue,
+              queueBannerDirection: isQueue ? element.queueBannerDirection : null,
+              ride: isQueue ? element.ride : null,
+              station: isQueue ? element.station : null
             });
           }
         }
       }
     }
     return footpaths;
+  }
+
+  function removeEntities(type: "guest" | "staff"): void {
+    for (const entity of map.getAllEntities(type)) {
+      try {
+        entity.remove();
+      } catch {
+        // Best-effort cleanup: entities already removed by ride demolition can be ignored.
+      }
+    }
+  }
+
+  function inspectParkMessages(): RctaiBuilder.ParkInspectionMessage[] {
+    return park.messages.map((message) => {
+      const copied: RctaiBuilder.ParkInspectionMessage = {
+        text: message.text,
+        type: message.type,
+        month: message.month,
+        day: message.day,
+        tickCount: message.tickCount,
+        isArchived: message.isArchived
+      };
+      if (message.subject !== undefined) {
+        copied.subject = message.subject;
+      }
+      return copied;
+    });
+  }
+
+  function inspectGuestProblems(): RctaiBuilder.ParkInspectionGuest[] {
+    const guests: RctaiBuilder.ParkInspectionGuest[] = [];
+    for (const guest of map.getAllEntities("guest")) {
+      const thoughts = guest.thoughts.filter((thought) => isGuestProblemThought(thought.type));
+      if (!guest.isLost && thoughts.length === 0) {
+        continue;
+      }
+      guests.push({
+        id: guest.id,
+        name: guest.name,
+        x: guest.x,
+        y: guest.y,
+        z: guest.z,
+        isLost: guest.isLost,
+        lostCountdown: guest.lostCountdown,
+        thoughts: thoughts.map((thought) => ({
+          type: thought.type,
+          item: thought.item,
+          freshness: thought.freshness,
+          text: thought.toString()
+        }))
+      });
+    }
+    return guests;
+  }
+
+  function isGuestProblemThought(type: string): boolean {
+    return type === "lost" || type === "cant_find" || type === "cant_find_exit";
   }
 
   function trackTraversalKeysByRide(): Record<number, string[]> {

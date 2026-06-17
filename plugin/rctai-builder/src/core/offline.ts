@@ -129,7 +129,9 @@ namespace RctaiBuilder {
           stations: []
         })),
         footpaths: [],
-        crashes: []
+        crashes: [],
+        messages: [],
+        guests: []
       };
     }
 

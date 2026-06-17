@@ -14,6 +14,14 @@ const SURFACE_BATCH_SIZE = 1_000;
 const TRACK_RIDE_BATCH_SIZE = 12;
 const GENERATED_TRACK_SURFACE_CLEARANCE = 32;
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+const RUNTIME_PROBLEM_THOUGHT_TYPES = new Set(["lost", "cant_find", "cant_find_exit"]);
+const RUNTIME_PROBLEM_MESSAGE_PATTERNS = [
+  /\bguests?\b.*\blost\b/i,
+  /\b(can'?t|cannot|cant)\s+find\b/i,
+  /\b(can'?t|cannot|cant)\s+get\s+to\b/i,
+  /\b(unreachable|not accessible|no path)\b/i,
+  /\b(exit|entrance)\b.*\b(blocked|not connected|no path|unreachable)\b/i
+];
 
 const options = parseArgs(process.argv.slice(2));
 const plan = readJson(resolve(process.cwd(), options.planPath));
@@ -33,7 +41,9 @@ try {
   await postJson(options.builderPort, "/reset-runtime-events", {});
 
   let inspection = await getInspection(options.builderPort, plan);
+  const baselineProblemMessages = runtimeProblemMessageKeys(inspection.park.messages ?? []);
   issues.push(...validateInspection(plan, inspection, "initial"));
+  issues.push(...validateRuntimeProblems(inspection, "initial", baselineProblemMessages));
 
   if (options.runtimeTicks > 0) {
     await postJson(options.builderPort, "/speed", { speed: 4 });
@@ -45,7 +55,11 @@ try {
       inspection = await getInspection(options.builderPort, plan);
       const elapsed = inspection.park.date.ticksElapsed - startTicks;
       lastTicks = inspection.park.date.ticksElapsed;
-      if (inspection.park.crashes.length > 0 || elapsed >= options.runtimeTicks) {
+      if (
+        inspection.park.crashes.length > 0 ||
+        hasRuntimeProblems(inspection, baselineProblemMessages) ||
+        elapsed >= options.runtimeTicks
+      ) {
         break;
       }
       await delay(options.pollMs);
@@ -59,6 +73,7 @@ try {
       );
     }
     issues.push(...validateInspection(plan, inspection, "runtime"));
+    issues.push(...validateRuntimeProblems(inspection, "runtime", baselineProblemMessages));
     process.stdout.write(`runtime advanced: ${Math.max(0, elapsed)} ticks\n`);
   }
 } catch (error) {
@@ -390,7 +405,6 @@ function validateInspection(plan, inspection, phase) {
   const actualRides = inspection.park.rides ?? [];
   const footpaths = (inspection.park.footpaths ?? []).map((footpath) => normalizeInspectionCoord(footpath, plan));
   const footpathsByXY = pathTilesByXY(footpaths);
-  const footpathTiles = new Set(footpaths.map((footpath) => coordKey(footpath)));
   const tracksByRide = tracksByRideId(inspection.park.tracks ?? []);
   const traversalsByRide = traversalsByRideId(inspection.park.trackTraversals ?? []);
   const surfacesByXY = surfacesByCoord(inspection.park.surfaces ?? []);
@@ -428,12 +442,18 @@ function validateInspection(plan, inspection, phase) {
     if (!rawVisual) {
       for (const access of actualAccessPathTiles(actual, plan)) {
         const tile = access.tile;
-        const candidates = (footpathsByXY.get(xyKey(tile)) ?? []).filter((footpath) => footpath.z === tile.z);
-        if (!footpathTiles.has(coordKey(tile))) {
+        const candidates = footpathsByXY.get(xyKey(tile)) ?? [];
+        const acceptedCandidates = candidates.filter((footpath) => footpath.z === tile.z);
+        const connectingCandidates = candidates.filter((footpath) => pathConnectsToAccess(footpath, access.direction, tile.z));
+        if (acceptedCandidates.length === 0) {
           phaseIssues.push(
             `${phase}: ride ${expected.id} ${access.label} path tile was not accepted by OpenRCT2 at ${coordKey(tile)}`
           );
-        } else if (!candidates.some((candidate) => reachable.has(pathKey(candidate)))) {
+        } else if (connectingCandidates.length === 0) {
+          phaseIssues.push(
+            `${phase}: ride ${expected.id} ${access.label} path tile does not connect toward the building at ${coordKey(tile)}, direction ${access.direction}`
+          );
+        } else if (!connectingCandidates.some((candidate) => reachable.has(pathKey(candidate)))) {
           phaseIssues.push(
             `${phase}: ride ${expected.id} ${access.label} path tile is not connected to the main path at ${coordKey(tile)}`
           );
@@ -458,6 +478,55 @@ function validateInspection(plan, inspection, phase) {
   }
 
   return phaseIssues;
+}
+
+function hasRuntimeProblems(inspection, baselineProblemMessages) {
+  return validateRuntimeProblems(inspection, "runtime", baselineProblemMessages).length > 0;
+}
+
+function validateRuntimeProblems(inspection, phase, baselineProblemMessages) {
+  const issues = [];
+  const problemMessages = (inspection.park.messages ?? []).filter(
+    (message) => isProblemParkMessage(message) && !baselineProblemMessages.has(runtimeProblemMessageKey(message))
+  );
+  const problemGuests = (inspection.park.guests ?? []).filter(
+    (guest) => guest.isLost === true || (guest.thoughts ?? []).some((thought) => RUNTIME_PROBLEM_THOUGHT_TYPES.has(thought.type))
+  );
+
+  for (const message of problemMessages.slice(0, 10)) {
+    issues.push(`${phase}: park message reports path/access problem: ${JSON.stringify(message.text)}`);
+  }
+  if (problemMessages.length > 10) {
+    issues.push(`${phase}: ${problemMessages.length - 10} additional path/access problem park messages`);
+  }
+
+  if (problemGuests.length > 0) {
+    const examples = problemGuests.slice(0, 10).map((guest) => {
+      const thoughts = (guest.thoughts ?? [])
+        .map((thought) => `${thought.type}:${thought.text}`)
+        .slice(0, 3)
+        .join(", ");
+      return `${guest.name ?? `guest ${guest.id}`} at ${guest.x},${guest.y},${guest.z}` +
+        (guest.isLost === true ? " is lost" : "") +
+        (thoughts.length > 0 ? ` (${thoughts})` : "");
+    });
+    issues.push(`${phase}: ${problemGuests.length} guests are lost or have pathfinding problems: ${examples.join("; ")}`);
+  }
+
+  return issues;
+}
+
+function runtimeProblemMessageKeys(messages) {
+  return new Set(messages.filter(isProblemParkMessage).map(runtimeProblemMessageKey));
+}
+
+function runtimeProblemMessageKey(message) {
+  return [message.month ?? "", message.day ?? "", message.subject ?? "", message.text ?? ""].join("|");
+}
+
+function isProblemParkMessage(message) {
+  const text = String(message.text ?? "");
+  return RUNTIME_PROBLEM_MESSAGE_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 function validateTrackTraversal(ride, actual, traversalsByRide, phase) {
@@ -976,27 +1045,28 @@ function actualAccessPathTiles(ride, plan) {
   const tiles = [];
   for (const station of ride.stations ?? []) {
     if (station.entrance !== null) {
-      tiles.push({ label: "entrance", tile: accessPathTile(station.entrance, plan) });
+      tiles.push(accessPathTile("entrance", station.entrance, plan));
     }
     if (station.exit !== null) {
-      tiles.push({ label: "exit", tile: accessPathTile(station.exit, plan) });
+      tiles.push(accessPathTile("exit", station.exit, plan));
     }
   }
   return tiles;
 }
 
-function accessPathTile(access, plan) {
+function accessPathTile(label, access, plan) {
   const location = normalizeInspectionCoord(access, plan);
-  const delta = directionDelta(normalizeDirection(location.direction ?? 0));
-  return clampPoint(
-    {
+  const direction = normalizeDirection(location.direction ?? 0);
+  const delta = directionDelta(direction);
+  return {
+    label,
+    direction,
+    tile: clampPoint({
       x: location.x - delta.x,
       y: location.y - delta.y,
       z: location.z
-    },
-    plan.park.size.width,
-    plan.park.size.height
-  );
+    }, plan.park.size.width, plan.park.size.height)
+  };
 }
 
 function normalizeInspectionCoord(coord, plan) {
@@ -1066,6 +1136,10 @@ function pathTilesConnect(from, to, direction) {
 
 function pathEdgeAllows(path, direction) {
   return typeof path.edges !== "number" || (path.edges & (1 << normalizeDirection(direction))) !== 0;
+}
+
+function pathConnectsToAccess(path, direction, z) {
+  return pathEdgeZ(path, direction) === z && pathEdgeAllows(path, direction);
 }
 
 function pathEdgeZ(path, direction) {

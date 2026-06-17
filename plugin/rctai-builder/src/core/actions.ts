@@ -780,7 +780,37 @@ namespace RctaiBuilder {
       spec.edges = edges;
     }
 
+    addRideAccessPathEdges(byXY, plan, state);
+
     return byKey;
+  }
+
+  function addRideAccessPathEdges(
+    byXY: Map<string, PathNetworkBuildSpec[]>,
+    plan: RctaiBuilder.ParkPlan,
+    state: RctaiBuilder.JobState
+  ): void {
+    for (const ride of plan.rides) {
+      if (isRawVisualRide(ride)) {
+        continue;
+      }
+      for (const isExit of [false, true]) {
+        const offset = entranceExitOffset(ride, isExit);
+        const direction = normalizeDirection(offset.direction ?? ride.rotation ?? 0);
+        const delta = directionTileDelta(direction);
+        const coord = {
+          x: ride.position.x + offset.x - delta.x,
+          y: ride.position.y + offset.y - delta.y
+        };
+        const z = offset.z ?? rideBuildZ(ride, state, planBuildZ(plan));
+        const candidates = byXY.get(pathCoordKey(coord)) ?? [];
+        for (const spec of candidates) {
+          if (pathSpecEdgeZ(spec, direction) === z) {
+            spec.edges |= 1 << direction;
+          }
+        }
+      }
+    }
   }
 
   function pathSpecsConnect(from: PathTileBuildSpec, to: PathTileBuildSpec, direction: number): boolean {
