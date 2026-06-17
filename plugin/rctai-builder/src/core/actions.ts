@@ -113,6 +113,8 @@ namespace RctaiBuilder {
   const PATH_HEIGHT_STEP = 16;
   const FOOTPRINT_SURFACE_CLEARANCE = 16;
   const MAX_BUILD_Z = 248 * 8;
+  const RIDE_SET_VEHICLE_NUM_TRAINS = 0;
+  const SINGLE_TRAIN_COUNT = 1;
 
   export function createBuildSteps(plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
     const steps: RctaiBuilder.QueuedStep[] = [
@@ -183,6 +185,9 @@ namespace RctaiBuilder {
 
     for (const ride of plan.rides) {
       if (!isRawVisualRide(ride)) {
+        if (hasGeneratedTrack(ride)) {
+          steps.push(createSingleTrainStep(ride));
+        }
         steps.push(createOpenRideStep(ride));
       }
     }
@@ -269,6 +274,11 @@ namespace RctaiBuilder {
     return track?.some((segment) => segment.raw === true) ?? false;
   }
 
+  function hasGeneratedTrack(ride: RctaiBuilder.RidePlan): boolean {
+    const track = ride.track ?? null;
+    return track !== null && track.length > 0 && !isRawVisualRide(ride);
+  }
+
   function createRideCreateStep(ride: RctaiBuilder.RidePlan): RctaiBuilder.QueuedStep {
     return RctaiBuilder.createAdapterStep(`create ride ${ride.id}`, (adapter, state, done) => {
       const resolved = adapter.resolveRideObject(ride.rideType, ride.rideObject ?? null);
@@ -328,6 +338,34 @@ namespace RctaiBuilder {
         return;
       }
       adapter.executeAction("ridesetstatus", { ride: rideId, status: 1 }, done);
+    }, { critical: true, rideId: ride.id });
+  }
+
+  function createSingleTrainStep(ride: RctaiBuilder.RidePlan): RctaiBuilder.QueuedStep {
+    return RctaiBuilder.createAdapterStep(`set single train ${ride.id}`, (adapter, state, done) => {
+      if (state.failedRideIds[ride.id] === true) {
+        done({});
+        return;
+      }
+      const rideId = state.rideIds[ride.id];
+      if (rideId === undefined) {
+        done({
+          error: 1,
+          errorTitle: "Ride missing",
+          errorMessage: `No OpenRCT2 ride id exists for ${ride.id}`
+        });
+        return;
+      }
+      adapter.executeAction(
+        "ridesetvehicle",
+        {
+          ride: rideId,
+          type: RIDE_SET_VEHICLE_NUM_TRAINS,
+          value: SINGLE_TRAIN_COUNT,
+          colour: 0
+        },
+        done
+      );
     }, { critical: true, rideId: ride.id });
   }
 

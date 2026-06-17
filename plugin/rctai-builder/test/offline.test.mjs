@@ -52,6 +52,31 @@ test("offline build opens every non-raw ride after constructing paths", () => {
   }
 });
 
+test("offline build limits generated track rides to one train before opening", () => {
+  const plan = JSON.parse(readFileSync("../../fixtures/sample.park-plan.json", "utf8"));
+  const result = RctaiBuilder.runOfflinePlan(plan);
+  const expectedTrainLimited = plan.rides.filter(
+    (ride) => Array.isArray(ride.track) && ride.track.length > 0 && !ride.track.some((segment) => segment.raw === true)
+  ).length;
+  const vehicleActions = result.actions
+    .map((action, index) => ({ action, index }))
+    .filter((entry) => entry.action.action === "ridesetvehicle");
+
+  assert.equal(result.status.failedActions, 0);
+  assert.equal(vehicleActions.length, expectedTrainLimited);
+  for (const entry of vehicleActions) {
+    const openIndex = result.actions.findIndex(
+      (action) => action.action === "ridesetstatus" && action.args.ride === entry.action.args.ride
+    );
+    assert.ok(openIndex >= 0);
+    assert.ok(entry.index < openIndex);
+    assert.deepEqual(
+      { type: entry.action.args.type, value: entry.action.args.value, colour: entry.action.args.colour },
+      { type: 0, value: 1, colour: 0 }
+    );
+  }
+});
+
 test("missing ride objects are critical build failures", () => {
   class MissingRideObjectAdapter extends RctaiBuilder.FakeGameAdapter {
     resolveRideObject(rideType, preferredObject) {

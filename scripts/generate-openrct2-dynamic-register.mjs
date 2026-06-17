@@ -36,15 +36,37 @@ const BLOCK_BRAKES = 216;
 
 const RIDE_OBJECT_OVERRIDES = {
   alpine_rc: "openrct2.ride.alpine_coaster",
+  dodgems: "rct2.ride.dodg1",
+  drink_stall: "rct2.ride.drnks",
+  enterprise: "rct2.ride.enterp",
+  ferris_wheel: "rct2.ride.fwh1",
+  food_stall: "rct2.ride.burgb",
   giga_rc: "rct2.ride.intst",
+  haunted_house: "rct2.ride.hhbuild",
+  hyper_twister: "rct2.ride.goltr",
   hypercoaster: "rct2.ride.arrt2",
+  information_kiosk: "rct2.ride.infok",
+  inverted_rc: "rct2.ride.nemt",
+  launched_freefall: "rct2.ride.ssc1",
   looping_rc: "rct2.ride.scht1",
+  magic_carpet: "rct2.ride.mcarpet1",
+  merry_go_round: "rct2.ride.mgr1",
   mini_rc: "rct2.ride.jstar1",
   miniature_railway: "rct2.ride.nrl",
+  motion_simulator: "rct2.ride.simpod",
   multi_dimension_rc: "rct2.ride.arrx",
+  observation_tower: "rct2.ride.obs1",
   reverser_rc: "rct2.ride.revcar",
+  roto_drop: "rct2.ride.gdrop1",
+  space_rings: "rct2.ride.srings",
   spiral_rc: "rct2.ride.spdrcr",
+  spiral_slide: "rct2.ride.hskelt",
   suspended_monorail: "rct2.ride.smono",
+  swinging_ship: "rct2.ride.swsh1",
+  toilets: "rct2.ride.tlt1",
+  top_spin: "rct2.ride.topsp1",
+  twist: "rct2.ride.twist1",
+  twister_rc: "rct2.ride.bmsd",
   vertical_drop_rc: "rct2.ride.bmvd"
 };
 
@@ -165,6 +187,7 @@ function prepareTower(ride, axes, index, relation) {
   return {
     ...ride,
     footprint: { w: 7, h: 7 },
+    rideObject: RIDE_OBJECT_OVERRIDES[ride.rideType] ?? ride.rideObject ?? null,
     rotation: index % 4,
     track,
     __layout: layoutHint(relation, { x: 3, y: 3 }, "tower")
@@ -179,6 +202,7 @@ function prepareFlatRide(ride, axes, index, relation) {
   return {
     ...ride,
     rideType: visual.rideType,
+    rideObject: RIDE_OBJECT_OVERRIDES[visual.rideType] ?? null,
     footprint,
     rotation,
     track: [{ type: visual.trackType, x: 2, y: 2, z: BASE_Z, direction: rotation }],
@@ -197,9 +221,7 @@ function prepareDynamicTrackRide(ride, axes, index, relation) {
   const turnType = turnTypeFor(turnFamily, turnClockwise);
   const rotation = normalizeDirection(relation.memberIndex + relation.clusterOrdinal + index);
   const visualRideType = visualRideTypeFor(ride, axes, relation);
-  // OpenRCT2 currently rejects our generated vertical-loop portals as incomplete circuits.
-  // Keep the real park openable until a validated loop template replaces this guard.
-  const allowLoop = false;
+  const allowLoop = canUseRenderedVerticalLoop(ride, visualRideType) && (clustered || (axes.adventure > 0.55 && axes.risk > 0.35));
   const hillHeight = Math.max(1, Math.min(3, Math.round(1 + axes.size * 2.5)));
   const variant = Math.abs(hash(`${relation.clusterKey}:${relation.memberIndex}:${ride.id}`)) % 5;
 
@@ -326,11 +348,15 @@ function connectedSideCandidates(role, { ride, axes, seed, hillHeight, allowLoop
 function buildLoopPortal(seed, axes, relation) {
   const first = seeded(seed, 90) > 0.5 ? LEFT_LOOP : RIGHT_LOOP;
   const second = first === LEFT_LOOP ? RIGHT_LOOP : LEFT_LOOP;
-  const pieces = [{ type: first }, { type: second }];
+  const pieces = [...buildVerticalLoop(first), ...repeat(FLAT, 1), ...buildVerticalLoop(second)];
   if (relation.clusterSize > 2 || axes.risk > 0.55) {
-    pieces.push(...repeat(FLAT, 1), { type: second }, { type: first });
+    pieces.push(...repeat(FLAT, 2), ...buildVerticalLoop(second), ...repeat(FLAT, 1), ...buildVerticalLoop(first));
   }
   return pieces;
+}
+
+function buildVerticalLoop(type) {
+  return [{ type: FLAT_TO_UP_25 }, { type }, { type: DOWN_25_TO_FLAT }];
 }
 
 function buildClusterPass(ride, length, axes, seed, relation) {
@@ -502,6 +528,13 @@ function turnTypeFor(family, clockwise) {
 
 function canUseVerticalLoop(ride) {
   return ride.buildOut?.trackGroups?.includes("verticalLoop") === true || ride.buildOut?.inversions?.includes("verticalLoop") === true;
+}
+
+function canUseRenderedVerticalLoop(ride, visualRideType) {
+  return (
+    canUseVerticalLoop(ride) ||
+    ["giga_rc", "looping_rc", "twister_rc", "corkscrew_rc", "stand_up_rc", "inverted_rc"].includes(visualRideType)
+  );
 }
 
 function placeRides(rides) {

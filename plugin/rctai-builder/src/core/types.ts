@@ -115,6 +115,7 @@ namespace RctaiBuilder {
     | "ridesetappearance"
     | "ridesetname"
     | "ridesetstatus"
+    | "ridesetvehicle"
     | "smallsceneryplace"
     | "trackplace"
     | "wallplace";
