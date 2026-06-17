@@ -15,7 +15,12 @@ export function extractWorkModel(options: ExtractOptions): WorkModel {
   const repoPath = resolveGitRoot(normalizeRepoPath(options.repoPath));
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   const repo = readRepoInfo(repoPath, options.branch);
-  const ghPrs = extractGithubPullRequests(repoPath, options.branch, options.prLimit ?? DEFAULT_PR_LIMIT);
+  const ghPrs = extractGithubPullRequests(repoPath, options.branch, options.prLimit ?? DEFAULT_PR_LIMIT, {
+    ...(options.authors === undefined ? {} : { authors: options.authors }),
+    ...(options.before === undefined ? {} : { before: options.before }),
+    ...(options.after === undefined ? {} : { after: options.after }),
+    ...(options.is === undefined ? {} : { is: options.is })
+  });
   const basePrs =
     ghPrs !== null && ghPrs.length > 0
       ? ghPrs

@@ -22,43 +22,52 @@ const VIEW_FIELDS = [
   "title"
 ];
 
+export interface PullRequestSearchFilters {
+  authors?: readonly string[];
+  before?: string;
+  after?: string;
+  is?: readonly string[];
+}
+
 export function extractGithubPullRequests(
   repoPath: string,
   branch: string,
-  prLimit: number
+  prLimit: number,
+  filters: PullRequestSearchFilters = {}
 ): ExtractedPullRequest[] | null {
-  const list = runGh(repoPath, [
-    "pr",
-    "list",
-    "--base",
-    branch,
-    "--state",
-    "all",
-    "--limit",
-    String(prLimit),
-    "--json",
-    LIST_FIELDS.join(",")
-  ]);
+  const authorFilters = normalizeAuthors(filters.authors);
+  const listRuns = authorFilters.length === 0 ? [null] : authorFilters;
+  const listedByNumber = new Map<number, Record<string, unknown>>();
 
-  if (!list.ok) {
-    return null;
+  for (const author of listRuns) {
+    const list = runGh(repoPath, buildPullRequestListArgs(branch, prLimit, filters, author));
+
+    if (!list.ok) {
+      return null;
+    }
+
+    const listed = parseJsonArray(list.stdout);
+
+    if (listed === null) {
+      continue;
+    }
+
+    for (const item of listed) {
+      const number = readNumber(item, "number");
+
+      if (number !== null) {
+        listedByNumber.set(number, item);
+      }
+    }
   }
 
-  const listed = parseJsonArray(list.stdout);
-
-  if (listed === null || listed.length === 0) {
+  if (listedByNumber.size === 0) {
     return [];
   }
 
   const prs: ExtractedPullRequest[] = [];
 
-  for (const item of listed) {
-    const number = readNumber(item, "number");
-
-    if (number === null) {
-      continue;
-    }
-
+  for (const number of [...listedByNumber.keys()].sort((left, right) => left - right)) {
     const pr = viewPullRequest(repoPath, number);
 
     if (pr !== null) {
@@ -66,7 +75,108 @@ export function extractGithubPullRequests(
     }
   }
 
-  return prs.sort(compareExtractedPrs);
+  return prs.sort(compareExtractedPrs).slice(-prLimit);
+}
+
+export function buildPullRequestListArgs(
+  branch: string,
+  prLimit: number,
+  filters: PullRequestSearchFilters = {},
+  author: string | null = null
+): string[] {
+  const args = [
+    "pr",
+    "list",
+    "--base",
+    branch,
+    "--state",
+    "all",
+    "--limit",
+    String(prLimit)
+  ];
+  const normalizedAuthor = author === null ? null : normalizeAuthor(author);
+  const search = buildPullRequestSearchQuery(filters);
+
+  if (normalizedAuthor !== null) {
+    args.push("--author", normalizedAuthor);
+  }
+
+  if (search !== null) {
+    args.push("--search", search);
+  }
+
+  args.push(
+    "--json",
+    LIST_FIELDS.join(",")
+  );
+
+  return args;
+}
+
+function buildPullRequestSearchQuery(filters: PullRequestSearchFilters): string | null {
+  const terms = [
+    ...normalizeIsFilters(filters.is),
+    ...dateSearchTerms(filters)
+  ];
+
+  return terms.length === 0 ? null : terms.join(" ");
+}
+
+function dateSearchTerms(filters: PullRequestSearchFilters): string[] {
+  const terms: string[] = [];
+  const after = normalizeDateFilter(filters.after, "after");
+  const before = normalizeDateFilter(filters.before, "before");
+
+  if (after !== null) {
+    terms.push(`created:>=${after}`);
+  }
+
+  if (before !== null) {
+    terms.push(`created:<=${before}`);
+  }
+
+  return terms;
+}
+
+function normalizeAuthors(values: readonly string[] | undefined): string[] {
+  return normalizeList(values).map(normalizeAuthor);
+}
+
+function normalizeAuthor(value: string): string {
+  return value.replace(/^author:/i, "").trim();
+}
+
+function normalizeIsFilters(values: readonly string[] | undefined): string[] {
+  return normalizeList(values).map((value) => (/^is:/i.test(value) ? value : `is:${value}`));
+}
+
+function normalizeList(values: readonly string[] | undefined): string[] {
+  if (values === undefined) {
+    return [];
+  }
+
+  return values
+    .flatMap((value) => value.split(","))
+    .map((value) => value.trim())
+    .filter((value, index, all) => value.length > 0 && all.indexOf(value) === index);
+}
+
+function normalizeDateFilter(value: string | undefined, label: string): string | null {
+  if (value === undefined) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  if (Number.isNaN(Date.parse(trimmed))) {
+    throw new Error(`--${label} must be a parseable date`);
+  }
+
+  return trimmed;
 }
 
 function viewPullRequest(repoPath: string, number: number): ExtractedPullRequest | null {

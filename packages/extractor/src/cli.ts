@@ -13,6 +13,10 @@ interface CliArgs {
   sessionsRoot?: string;
   includeSessions: boolean;
   pretty: boolean;
+  authors?: string[];
+  before?: string;
+  after?: string;
+  is?: string[];
 }
 
 async function main(): Promise<void> {
@@ -22,7 +26,11 @@ async function main(): Promise<void> {
     branch: args.branch,
     includeSessions: args.includeSessions,
     ...(args.generatedAt === undefined ? {} : { generatedAt: args.generatedAt }),
-    ...(args.sessionsRoot === undefined ? {} : { sessionsRoot: resolveCliPath(args.sessionsRoot) })
+    ...(args.sessionsRoot === undefined ? {} : { sessionsRoot: resolveCliPath(args.sessionsRoot) }),
+    ...(args.authors === undefined ? {} : { authors: args.authors }),
+    ...(args.before === undefined ? {} : { before: args.before }),
+    ...(args.after === undefined ? {} : { after: args.after }),
+    ...(args.is === undefined ? {} : { is: args.is })
   };
   const workModel = extractWorkModel(options);
   const json = `${JSON.stringify(workModel, null, args.pretty ? 2 : 0)}\n`;
@@ -44,6 +52,10 @@ function parseArgs(argv: string[]): CliArgs {
   let outputPath: string | undefined;
   let generatedAt: string | undefined;
   let sessionsRoot: string | undefined;
+  const authors: string[] = [];
+  const isFilters: string[] = [];
+  let before: string | undefined;
+  let after: string | undefined;
   let includeSessions = true;
   let pretty = true;
 
@@ -73,6 +85,30 @@ function parseArgs(argv: string[]): CliArgs {
 
     if (arg === "--sessions-root") {
       sessionsRoot = readOptionValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--author") {
+      authors.push(...parseListValue(readOptionValue(argv, index, arg)));
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--before") {
+      before = readOptionValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--after") {
+      after = readOptionValue(argv, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--is") {
+      isFilters.push(...parseListValue(readOptionValue(argv, index, arg)));
       index += 1;
       continue;
     }
@@ -120,8 +156,23 @@ function parseArgs(argv: string[]): CliArgs {
     pretty,
     ...(outputPath === undefined ? {} : { outputPath }),
     ...(generatedAt === undefined ? {} : { generatedAt }),
-    ...(sessionsRoot === undefined ? {} : { sessionsRoot })
+    ...(sessionsRoot === undefined ? {} : { sessionsRoot }),
+    ...(authors.length === 0 ? {} : { authors: unique(authors) }),
+    ...(before === undefined ? {} : { before }),
+    ...(after === undefined ? {} : { after }),
+    ...(isFilters.length === 0 ? {} : { is: unique(isFilters) })
   };
+}
+
+function parseListValue(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 function readOptionValue(argv: string[], index: number, option: string): string {
@@ -144,7 +195,7 @@ function resolveCliPath(path: string): string {
 
 function usage(): void {
   process.stdout.write(
-    "usage: rctai-extract <repo-path> <branch> [--out work-model.json] [--generated-at ISO] [--sessions-root dir] [--no-sessions] [--pretty|--compact]\n"
+    "usage: rctai-extract <repo-path> <branch> [--out work-model.json] [--generated-at ISO] [--sessions-root dir] [--author USER[,USER...]] [--before DATE] [--after DATE] [--is open|closed|merged] [--no-sessions] [--pretty|--compact]\n"
   );
 }
 

@@ -106,6 +106,10 @@ export interface ExtractOptions {
   includeSessions?: boolean;
   prLimit?: number;
   syntheticLimit?: number;
+  authors?: string[];
+  before?: string;
+  after?: string;
+  is?: string[];
 }
 
 export interface RepoInfo {

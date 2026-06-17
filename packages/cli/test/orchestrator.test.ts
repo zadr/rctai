@@ -27,7 +27,19 @@ test("parses the required render command and deterministic options", () => {
     "--build",
     "localhost:12345",
     "--generated-at",
-    GENERATED_AT
+    GENERATED_AT,
+    "--author",
+    "alice,bob",
+    "--author",
+    "carol",
+    "--after",
+    "2026-06-01",
+    "--before",
+    "2026-06-30",
+    "--is",
+    "merged",
+    "--is",
+    "is:closed"
   ]);
 
   equal(parsed.command, "render");
@@ -37,6 +49,10 @@ test("parses the required render command and deterministic options", () => {
   equal(parsed.options.pngPath, "/tmp/preview.png");
   equal(parsed.options.buildTarget, "localhost:12345");
   equal(parsed.options.generatedAt, GENERATED_AT);
+  deepEqual(parsed.options.authors, ["alice", "bob", "carol"]);
+  equal(parsed.options.after, "2026-06-01");
+  equal(parsed.options.before, "2026-06-30");
+  deepEqual(parsed.options.is, ["merged", "is:closed"]);
 });
 
 test("builds deterministic park plans from a git repo using synthetic extraction", () => {

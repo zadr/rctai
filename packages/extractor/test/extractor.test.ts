@@ -5,10 +5,42 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 import { extractWorkModel } from "../src/extractor.js";
+import { buildPullRequestListArgs } from "../src/github.js";
 import { claudeProjectSlug } from "../src/sessions.js";
 import { validateWorkModel } from "../src/validate.js";
 
 const GENERATED_AT = "2026-06-16T12:00:00Z";
+
+test("builds deterministic GitHub PR search arguments from optional filters", () => {
+  deepEqual(
+    buildPullRequestListArgs(
+      "main",
+      25,
+      {
+        after: "2026-06-01",
+        before: "2026-06-30",
+        is: ["merged", "is:closed"]
+      },
+      "author:zdrayer"
+    ),
+    [
+      "pr",
+      "list",
+      "--base",
+      "main",
+      "--state",
+      "all",
+      "--limit",
+      "25",
+      "--author",
+      "zdrayer",
+      "--search",
+      "is:merged is:closed created:>=2026-06-01 created:<=2026-06-30",
+      "--json",
+      "number"
+    ]
+  );
+});
 
 test("extracts deterministic schema-valid synthetic PRs from a git repo with no GitHub PRs", () => {
   const fixture = createGitFixture();

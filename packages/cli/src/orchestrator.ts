@@ -36,6 +36,10 @@ export interface RenderOptions {
   includeSessions?: boolean;
   prLimit?: number;
   syntheticLimit?: number;
+  authors?: string[];
+  before?: string;
+  after?: string;
+  is?: string[];
 }
 
 export interface CliRenderOptions extends RenderOptions {
@@ -96,7 +100,11 @@ export function buildParkPlan(options: RenderOptions): BuildParkPlanResult {
     ...(options.generatedAt === undefined ? {} : { generatedAt: options.generatedAt }),
     ...(options.includeSessions === undefined ? {} : { includeSessions: options.includeSessions }),
     ...(options.prLimit === undefined ? {} : { prLimit: options.prLimit }),
-    ...(options.syntheticLimit === undefined ? {} : { syntheticLimit: options.syntheticLimit })
+    ...(options.syntheticLimit === undefined ? {} : { syntheticLimit: options.syntheticLimit }),
+    ...(options.authors === undefined ? {} : { authors: options.authors }),
+    ...(options.before === undefined ? {} : { before: options.before }),
+    ...(options.after === undefined ? {} : { after: options.after }),
+    ...(options.is === undefined ? {} : { is: options.is })
   });
   const classifierProfiles = loadClassifierRideProfiles();
   const classifiedRides = classifyWorkModel(workModel, { rideProfiles: classifierProfiles });
@@ -214,6 +222,30 @@ export function parseRenderArgs(args: readonly string[]): ParsedArgs {
       continue;
     }
 
+    if (arg === "--author") {
+      options.authors = unique([...(options.authors ?? []), ...parseListValue(readFlagValue(rest, index, arg))]);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--before") {
+      options.before = readFlagValue(rest, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--after") {
+      options.after = readFlagValue(rest, index, arg);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--is") {
+      options.is = unique([...(options.is ?? []), ...parseListValue(readFlagValue(rest, index, arg))]);
+      index += 1;
+      continue;
+    }
+
     throw new Error(`Unknown option: ${arg ?? ""}\n${usage()}`);
   }
 
@@ -260,8 +292,20 @@ export function convertSvgToPng(svgPath: string, pngPath: string): void {
 export function usage(): string {
   return [
     "usage: rctai render <repo> <branch> [--out park-plan.json] [--png preview.png]",
-    "       [--build host:port] [--generated-at 2026-06-16T12:00:00Z]"
+    "       [--build host:port] [--generated-at 2026-06-16T12:00:00Z]",
+    "       [--author USER[,USER...]] [--before DATE] [--after DATE] [--is open|closed|merged]"
   ].join("\n");
+}
+
+function parseListValue(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 function buildUrl(target: string): string {
