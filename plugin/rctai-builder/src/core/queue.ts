@@ -129,6 +129,22 @@ namespace RctaiBuilder {
       };
     }
 
+    inspectPark(): RctaiBuilder.ParkInspection {
+      return this.adapter.inspectPark();
+    }
+
+    inspectTrackSegments(types: number[]): Record<string, RctaiBuilder.TrackSegmentInfo | null> {
+      return this.adapter.inspectTrackSegments(types);
+    }
+
+    resetRuntimeEvents(): void {
+      this.adapter.resetRuntimeEvents();
+    }
+
+    setGameSpeed(speed: number, callback: (result: RctaiBuilder.GameActionResultLike) => void): void {
+      this.adapter.setGameSpeed(speed, callback);
+    }
+
     private isIdle(): boolean {
       return this.active === null && this.jobs.length === 0 && !this.pending;
     }

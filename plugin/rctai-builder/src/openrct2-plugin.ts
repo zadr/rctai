@@ -9,6 +9,7 @@ namespace RctaiBuilder {
 
   export class OpenRCT2Adapter implements RctaiBuilder.BuilderAdapter {
     private readonly rideObjectCache: Record<string, RctaiBuilder.ResolvedRideObject | null> = {};
+    private readonly crashEvents: RctaiBuilder.RuntimeCrashEvent[] = [];
 
     executeAction(
       action: RctaiBuilder.GameActionName,
@@ -105,6 +106,14 @@ namespace RctaiBuilder {
           };
     }
 
+    inspectTrackSegments(types: number[]): Record<string, RctaiBuilder.TrackSegmentInfo | null> {
+      const result: Record<string, RctaiBuilder.TrackSegmentInfo | null> = {};
+      for (const type of types) {
+        result[String(type)] = this.getTrackSegment(type);
+      }
+      return result;
+    }
+
     getSurfaceZ(x: number, y: number): number | null {
       try {
         const tile = map.getTile(x, y);
@@ -138,6 +147,58 @@ namespace RctaiBuilder {
 
     getExistingRideIds(): number[] {
       return map.rides.map((ride) => ride.id);
+    }
+
+    inspectPark(): RctaiBuilder.ParkInspection {
+      return {
+        date: {
+          ticksElapsed: date.ticksElapsed,
+          monthsElapsed: date.monthsElapsed,
+          monthProgress: date.monthProgress,
+          day: date.day,
+          month: date.month,
+          year: date.year
+        },
+        map: {
+          width: map.size.x,
+          height: map.size.y
+        },
+        rides: map.rides.map((ride) => ({
+          id: ride.id,
+          name: ride.name,
+          type: ride.type,
+          classification: ride.classification,
+          status: ride.status,
+          stations: ride.stations
+            .filter((station) => station.entrance !== null || station.exit !== null || station.start !== null || station.length > 0)
+            .map((station) => ({
+              entrance: station.entrance === null ? null : copyCoordD(station.entrance),
+              exit: station.exit === null ? null : copyCoordD(station.exit),
+              start: copyCoord(station.start),
+              length: station.length
+            }))
+        })),
+        footpaths: inspectFootpaths(),
+        crashes: this.crashEvents.slice()
+      };
+    }
+
+    resetRuntimeEvents(): void {
+      this.crashEvents.length = 0;
+    }
+
+    recordCrash(event: VehicleCrashArgs): void {
+      this.crashEvents.push({
+        vehicleId: event.id,
+        crashIntoType: event.crashIntoType,
+        ticksElapsed: date.ticksElapsed,
+        monthsElapsed: date.monthsElapsed,
+        monthProgress: date.monthProgress
+      });
+    }
+
+    setGameSpeed(speed: number, callback: (result: RctaiBuilder.GameActionResultLike) => void): void {
+      this.executeAction("gamesetspeed", { speed }, callback);
     }
 
     savePark(name: string, callback: (result: RctaiBuilder.GameActionResultLike) => void): void {
@@ -242,6 +303,35 @@ namespace RctaiBuilder {
     }
   }
 
+  function inspectFootpaths(): RctaiBuilder.ParkInspectionFootpath[] {
+    const footpaths: RctaiBuilder.ParkInspectionFootpath[] = [];
+    for (let x = 0; x < map.size.x; x += 1) {
+      for (let y = 0; y < map.size.y; y += 1) {
+        const tile = map.getTile(x, y);
+        for (const element of tile.elements) {
+          if (element.type === "footpath") {
+            footpaths.push({ x, y });
+          }
+        }
+      }
+    }
+    return footpaths;
+  }
+
+  function copyCoord(coord: CoordsXYZ | null): RctaiBuilder.CoordD | null {
+    if (coord === null) {
+      return null;
+    }
+    return { x: coord.x, y: coord.y, z: coord.z };
+  }
+
+  function copyCoordD(coord: CoordsXYZD | null): RctaiBuilder.CoordD | null {
+    if (coord === null) {
+      return null;
+    }
+    return { x: coord.x, y: coord.y, z: coord.z, direction: coord.direction };
+  }
+
   export function startOpenRCT2Server(port = RctaiBuilder.DEFAULT_PORT): RctaiBuilder.BuildController {
     const adapter = new OpenRCT2Adapter();
     const controller = new RctaiBuilder.BuildController(adapter);
@@ -271,6 +361,10 @@ namespace RctaiBuilder {
     listener.listen(port, "127.0.0.1");
     context.subscribe("interval.tick", () => {
       controller.tick();
+    });
+    context.subscribe("vehicle.crash", (event) => {
+      adapter.recordCrash(event);
+      adapter.log(`[rctai-builder] vehicle crash: ${event.id} into ${event.crashIntoType}`);
     });
     adapter.log(`[rctai-builder] listening on 127.0.0.1:${port}`);
     return controller;

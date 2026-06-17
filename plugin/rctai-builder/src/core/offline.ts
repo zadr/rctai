@@ -76,6 +76,14 @@ namespace RctaiBuilder {
       return getOfflineTrackSegment(type);
     }
 
+    inspectTrackSegments(types: number[]): Record<string, RctaiBuilder.TrackSegmentInfo | null> {
+      const result: Record<string, RctaiBuilder.TrackSegmentInfo | null> = {};
+      for (const type of types) {
+        result[String(type)] = this.getTrackSegment(type);
+      }
+      return result;
+    }
+
     getSurfaceZ(): number | null {
       return null;
     }
@@ -86,6 +94,42 @@ namespace RctaiBuilder {
 
     getExistingRideIds(): number[] {
       return [...this.rideIds];
+    }
+
+    inspectPark(): RctaiBuilder.ParkInspection {
+      return {
+        date: {
+          ticksElapsed: 0,
+          monthsElapsed: 0,
+          monthProgress: 0,
+          day: 1,
+          month: 0,
+          year: 1
+        },
+        map: {
+          width: 0,
+          height: 0
+        },
+        rides: this.rideIds.map((id) => ({
+          id,
+          name: `offline ride ${id}`,
+          type: 0,
+          classification: "ride",
+          status: "open",
+          vehicles: [],
+          stations: []
+        })),
+        footpaths: [],
+        crashes: []
+      };
+    }
+
+    resetRuntimeEvents(): void {
+      // Offline validation has no runtime event source.
+    }
+
+    setGameSpeed(_speed: number, callback: (result: RctaiBuilder.GameActionResultLike) => void): void {
+      callback({});
     }
 
     savePark(name: string, callback: (result: RctaiBuilder.GameActionResultLike) => void): void {
@@ -158,8 +202,8 @@ namespace RctaiBuilder {
       17: { beginZ: 0, endZ: 0, endX: -64, endY: 64, beginDirection: 0, endDirection: 1 },
       22: { beginZ: 0, endZ: 0, endX: -64, endY: -64, beginDirection: 0, endDirection: 3 },
       23: { beginZ: 0, endZ: 0, endX: -64, endY: 64, beginDirection: 0, endDirection: 1 },
-      40: { beginZ: 0, endZ: 0, endX: -64, endY: 0, beginDirection: 0, endDirection: 0 },
-      41: { beginZ: 0, endZ: 0, endX: -64, endY: 0, beginDirection: 0, endDirection: 0 },
+      40: { beginZ: 0, endZ: 0, endX: -32, endY: -32, beginDirection: 0, endDirection: 0 },
+      41: { beginZ: 0, endZ: 0, endX: -32, endY: 32, beginDirection: 0, endDirection: 0 },
       42: { beginZ: 0, endZ: 0, endX: -32, endY: -32, beginDirection: 0, endDirection: 3 },
       43: { beginZ: 0, endZ: 0, endX: -32, endY: 32, beginDirection: 0, endDirection: 1 },
       50: oneTileTurnLeft,

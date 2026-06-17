@@ -32,6 +32,67 @@ test("offline ridecreate actions use safe OpenRCT2 colour preset indices", () =>
   }
 });
 
+test("offline build opens every non-raw ride after constructing paths", () => {
+  const plan = JSON.parse(readFileSync("../../fixtures/sample.park-plan.json", "utf8"));
+  const result = RctaiBuilder.runOfflinePlan(plan);
+  const pathIndex = result.actions.findIndex((action) => action.action === "footpathplace");
+  const openRideIndices = result.actions
+    .map((action, index) => ({ action, index }))
+    .filter((entry) => entry.action.action === "ridesetstatus");
+  const expectedOpenCount = plan.rides.filter(
+    (ride) => !Array.isArray(ride.track) || !ride.track.some((segment) => segment.raw === true)
+  ).length;
+
+  assert.equal(result.status.failedActions, 0);
+  assert.equal(openRideIndices.length, expectedOpenCount);
+  assert.ok(pathIndex >= 0);
+  for (const entry of openRideIndices) {
+    assert.ok(entry.index > pathIndex);
+    assert.equal(entry.action.args.status, 1);
+  }
+});
+
+test("missing ride objects are critical build failures", () => {
+  class MissingRideObjectAdapter extends RctaiBuilder.FakeGameAdapter {
+    resolveRideObject(rideType, preferredObject) {
+      if (rideType === "hybrid_rc") {
+        return null;
+      }
+      return super.resolveRideObject(rideType, preferredObject);
+    }
+  }
+
+  const plan = {
+    schemaVersion: 1,
+    park: {
+      name: "missing object",
+      size: { width: 64, height: 64 },
+      entrance: { x: 10, y: 10, direction: 2 }
+    },
+    rides: [
+      {
+        id: "RID-1",
+        name: "Missing Hybrid",
+        archetype: "coaster",
+        rideType: "hybrid_rc",
+        footprint: { w: 3, h: 3 },
+        position: { x: 15, y: 15 },
+        track: [{ type: 2 }, { type: 1 }]
+      }
+    ],
+    paths: [],
+    scenery: []
+  };
+
+  const controller = new RctaiBuilder.BuildController(new MissingRideObjectAdapter());
+  controller.enqueueBuild(plan);
+  const status = controller.runUntilIdle();
+
+  assert.equal(status.failedActions, 1);
+  assert.equal(status.criticalFailedActions, 1);
+  assert.match(status.failedActionDescriptions[0], /Ride object unavailable/);
+});
+
 test("offline build prepares sandbox and owned land before construction", () => {
   const plan = JSON.parse(readFileSync("../../fixtures/sample.park-plan.json", "utf8"));
   const result = RctaiBuilder.runOfflinePlan(plan);

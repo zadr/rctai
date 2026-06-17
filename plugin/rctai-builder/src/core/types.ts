@@ -103,6 +103,7 @@ namespace RctaiBuilder {
     | "clearscenery"
     | "footpathadditionplace"
     | "footpathplace"
+    | "gamesetspeed"
     | "landsetheight"
     | "landsetrights"
     | "largesceneryplace"
@@ -157,6 +158,60 @@ namespace RctaiBuilder {
     endDirection: number;
   }
 
+  export interface RuntimeCrashEvent {
+    vehicleId: number;
+    crashIntoType: string;
+    ticksElapsed: number;
+    monthsElapsed: number;
+    monthProgress: number;
+  }
+
+  export interface ParkInspection {
+    date: {
+      ticksElapsed: number;
+      monthsElapsed: number;
+      monthProgress: number;
+      day: number;
+      month: number;
+      year: number;
+    };
+    map: {
+      width: number;
+      height: number;
+    };
+    rides: ParkInspectionRide[];
+    footpaths: ParkInspectionFootpath[];
+    crashes: RuntimeCrashEvent[];
+  }
+
+  export interface ParkInspectionRide {
+    id: number;
+    name: string;
+    type: number;
+    classification: string;
+    status: string;
+    vehicles?: number[];
+    stations: ParkInspectionStation[];
+  }
+
+  export interface ParkInspectionStation {
+    entrance: CoordD | null;
+    exit: CoordD | null;
+    start: CoordD | null;
+    length: number;
+  }
+
+  export interface ParkInspectionFootpath {
+    x: number;
+    y: number;
+    z?: number;
+    direction?: number;
+    slopeDirection?: number | null;
+    isQueue?: boolean;
+    ride?: number | null;
+    station?: number | null;
+  }
+
   export interface BuilderAdapter {
     executeAction(
       action: GameActionName,
@@ -167,9 +222,13 @@ namespace RctaiBuilder {
     resolveObject(type: ObjectLookupType, identifier: string): number | null;
     resolvePathObjects(): PathObjects;
     getTrackSegment(type: number): TrackSegmentInfo | null;
+    inspectTrackSegments(types: number[]): Record<string, TrackSegmentInfo | null>;
     getSurfaceZ(x: number, y: number): number | null;
     placeRawTrack(args: RawTrackArgs): void;
     getExistingRideIds(): number[];
+    inspectPark(): ParkInspection;
+    resetRuntimeEvents(): void;
+    setGameSpeed(speed: number, callback: (result: GameActionResultLike) => void): void;
     savePark(name: string, callback: (result: GameActionResultLike) => void): void;
     log(message: string): void;
   }

@@ -90,8 +90,8 @@ const TRACK_META = {
   [BANKED_RIGHT_TURN_5]: { endX: -64, endY: 64, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 1 },
   [LEFT_TURN_3]: { endX: -32, endY: -32, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 3 },
   [RIGHT_TURN_3]: { endX: -32, endY: 32, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 1 },
-  [LEFT_LOOP]: { endX: -64, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
-  [RIGHT_LOOP]: { endX: -64, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
+  [LEFT_LOOP]: { endX: -32, endY: -32, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
+  [RIGHT_LOOP]: { endX: -32, endY: 32, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
   [BRAKES]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
   [BOOSTER]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
   [BLOCK_BRAKES]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 }
@@ -192,12 +192,14 @@ function prepareDynamicTrackRide(ride, axes, index, relation) {
   const stationLength = Math.max(3, Math.min(6, Math.round(3 + axes.size * 3)));
   const sideA = stationLength + 6 + Math.round(axes.size * (clustered ? 6 : 10) + seeded(seed, 1) * 5);
   const sideB = 5 + Math.round(axes.adventure * (clustered ? 6 : 8) + seeded(seed, 2) * 5);
-  const turnFamily = axes.risk > 0.48 ? "banked5" : seeded(seed, 3) > 0.35 ? "turn5" : "turn3";
+  const turnFamily = axes.risk > 0.48 || seeded(seed, 3) > 0.35 ? "turn5" : "turn3";
   const turnClockwise = seeded(seed, 4) > 0.42;
   const turnType = turnTypeFor(turnFamily, turnClockwise);
   const rotation = normalizeDirection(relation.memberIndex + relation.clusterOrdinal + index);
   const visualRideType = visualRideTypeFor(ride, axes, relation);
-  const allowLoop = canUseRenderedVerticalLoop(ride, visualRideType) && (clustered || (axes.adventure > 0.55 && axes.risk > 0.35));
+  // OpenRCT2 currently rejects our generated vertical-loop portals as incomplete circuits.
+  // Keep the real park openable until a validated loop template replaces this guard.
+  const allowLoop = false;
   const hillHeight = Math.max(1, Math.min(3, Math.round(1 + axes.size * 2.5)));
   const variant = Math.abs(hash(`${relation.clusterKey}:${relation.memberIndex}:${ride.id}`)) % 5;
 
@@ -1175,6 +1177,9 @@ function dominantKey(record, fallback) {
 }
 
 function visualRideTypeFor(ride, axes, relation) {
+  if (ride.rideType === "hybrid_rc") {
+    return "twister_rc";
+  }
   if (ride.rideType === "alpine_rc") {
     return relation.memberIndex % 2 === 0 ? "mini_rc" : "spiral_rc";
   }
@@ -1188,13 +1193,6 @@ function visualRideTypeFor(ride, axes, relation) {
     return "looping_rc";
   }
   return ride.rideType;
-}
-
-function canUseRenderedVerticalLoop(ride, visualRideType) {
-  return (
-    canUseVerticalLoop(ride) ||
-    ["giga_rc", "looping_rc", "twister_rc", "corkscrew_rc", "stand_up_rc", "inverted_rc"].includes(visualRideType)
-  );
 }
 
 function layoutHint(relation, anchor, role) {

@@ -58,6 +58,15 @@ test("routes health", () => {
   assert.equal(response.body.status, "ok");
 });
 
+test("routes park inspection", () => {
+  const response = builder.handleHttpRequest(request("GET", "/inspect"), controller());
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.status, "ok");
+  assert.deepEqual(response.body.park.crashes, []);
+  assert.deepEqual(response.body.park.footpaths, []);
+});
+
 test("routes build and enqueues valid park plans", () => {
   const body = JSON.stringify(samplePlan);
   const active = controller();
@@ -87,6 +96,17 @@ test("routes clear", () => {
   assert.equal(active.getStatus().queuedJobs, 1);
 });
 
+test("routes runtime controls", () => {
+  const active = controller();
+  const reset = builder.handleHttpRequest(request("POST", "/reset-runtime-events"), active);
+  const speed = builder.handleHttpRequest(request("POST", "/speed", JSON.stringify({ speed: 4 })), active);
+  const invalidSpeed = builder.handleHttpRequest(request("POST", "/speed", JSON.stringify({ speed: 9 })), active);
+
+  assert.equal(reset.status, 200);
+  assert.equal(speed.status, 200);
+  assert.equal(invalidSpeed.status, 400);
+});
+
 test("routes save", () => {
   const active = controller();
   const response = builder.handleHttpRequest(request("GET", "/save?name=rctai-test"), active);
@@ -113,4 +133,5 @@ test("formats content-length as UTF-8 bytes", () => {
   const body = response.slice(response.indexOf("\r\n\r\n") + 4);
 
   assert.equal(Number(rawLength), Buffer.byteLength(body, "utf8"));
+  assert.match(body, /Can\\u2019t open ride\\u2026/);
 });

@@ -30,6 +30,10 @@ namespace RctaiBuilder {
     enqueueClear(): string;
     enqueueSave(name: string): string;
     getStatus(): RctaiBuilder.BuildStatus;
+    inspectPark(): RctaiBuilder.ParkInspection;
+    inspectTrackSegments(types: number[]): Record<string, RctaiBuilder.TrackSegmentInfo | null>;
+    resetRuntimeEvents(): void;
+    setGameSpeed(speed: number, callback: (result: RctaiBuilder.GameActionResultLike) => void): void;
   }
 
   const STATUS_TEXT: Record<number, string> = {
@@ -132,6 +136,23 @@ namespace RctaiBuilder {
       });
     }
 
+    if (request.method === "GET" && request.path === "/inspect") {
+      return json(200, {
+        status: "ok",
+        version: RctaiBuilder.VERSION,
+        park: controller.inspectPark()
+      });
+    }
+
+    if (request.method === "GET" && request.path === "/track-segments") {
+      const types = parseTrackSegmentTypes(request.query.types ?? "");
+      return json(200, {
+        status: "ok",
+        version: RctaiBuilder.VERSION,
+        segments: controller.inspectTrackSegments(types)
+      });
+    }
+
     if (request.method === "POST" && request.path === "/build") {
       const parsedBody = parseJsonBody(request.body);
       if (!parsedBody.ok) {
@@ -152,6 +173,31 @@ namespace RctaiBuilder {
       return json(202, { accepted: true, jobId, builder: controller.getStatus() });
     }
 
+    if (request.method === "POST" && request.path === "/reset-runtime-events") {
+      controller.resetRuntimeEvents();
+      return json(200, { ok: true });
+    }
+
+    if (request.method === "POST" && request.path === "/speed") {
+      const parsedBody = parseJsonBody(request.body);
+      if (!parsedBody.ok) {
+        return json(400, { error: parsedBody.error });
+      }
+      const input = parsedBody.value as { speed?: unknown };
+      const speed = typeof input.speed === "number" ? input.speed : Number.NaN;
+      if (!Number.isInteger(speed) || speed < 0 || speed > 4) {
+        return json(400, { error: "speed must be an integer between 0 and 4" });
+      }
+      let actionResult: RctaiBuilder.GameActionResultLike = {};
+      controller.setGameSpeed(speed, (result) => {
+        actionResult = result;
+      });
+      if (actionResult.error !== undefined && actionResult.error !== 0) {
+        return json(422, { error: RctaiBuilder.formatGameActionError(actionResult) });
+      }
+      return json(200, { ok: true, speed });
+    }
+
     if (request.method === "GET" && request.path === "/save") {
       const name = request.query.name;
       if (name === undefined || name.trim().length === 0) {
@@ -161,7 +207,16 @@ namespace RctaiBuilder {
       return json(202, { accepted: true, jobId, builder: controller.getStatus() });
     }
 
-    if (request.path === "/health" || request.path === "/build" || request.path === "/clear" || request.path === "/save") {
+    if (
+      request.path === "/health" ||
+      request.path === "/inspect" ||
+      request.path === "/track-segments" ||
+      request.path === "/build" ||
+      request.path === "/clear" ||
+      request.path === "/reset-runtime-events" ||
+      request.path === "/speed" ||
+      request.path === "/save"
+    ) {
       return json(405, { error: "method not allowed" });
     }
 
@@ -177,7 +232,7 @@ namespace RctaiBuilder {
   }
 
   export function formatHttpResponse(response: HttpResponse): string {
-    const body = JSON.stringify(response.body);
+    const body = stringifyJsonAscii(response.body);
     const headers: Record<string, string> = {
       "Content-Type": "application/json; charset=utf-8",
       "Content-Length": String(utf8ByteLength(body)),
@@ -199,6 +254,13 @@ namespace RctaiBuilder {
     } catch {
       return { ok: false, error: "request body must be valid JSON" };
     }
+  }
+
+  function parseTrackSegmentTypes(input: string): number[] {
+    return input
+      .split(",")
+      .map((value) => Number(value.trim()))
+      .filter((value) => Number.isInteger(value) && value >= 0);
   }
 
   function splitTarget(target: string): { path: string; query: Record<string, string> } | null {
@@ -233,6 +295,12 @@ namespace RctaiBuilder {
 
   function json(status: number, body: unknown): HttpResponse {
     return { status, body };
+  }
+
+  function stringifyJsonAscii(value: unknown): string {
+    return JSON.stringify(value).replace(/[\u0080-\uFFFF]/g, (character) => {
+      return `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`;
+    });
   }
 
   function utf8ByteLength(input: string): number {

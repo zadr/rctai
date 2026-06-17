@@ -181,6 +181,12 @@ namespace RctaiBuilder {
       steps.push(createSceneryStep(scenery, plan));
     }
 
+    for (const ride of plan.rides) {
+      if (!isRawVisualRide(ride)) {
+        steps.push(createOpenRideStep(ride));
+      }
+    }
+
     return steps;
   }
 
@@ -225,37 +231,9 @@ namespace RctaiBuilder {
     const steps: RctaiBuilder.QueuedStep[] = [];
     const fallbackBuildZ = planBuildZ(plan);
 
-    steps.push(
-      RctaiBuilder.createGameActionStep(
-        `create ride ${ride.id}`,
-        "ridecreate",
-        (adapter, state) => {
-          const resolved = adapter.resolveRideObject(ride.rideType, ride.rideObject ?? null);
-          if (resolved === null) {
-            adapter.log(`[rctai-builder] no loaded ride object for ${ride.id} (${ride.rideType})`);
-            return null;
-          }
-          state.rideTypes[ride.id] = resolved.rideTypeId;
-          return {
-            rideType: resolved.rideTypeId,
-            rideObject: resolved.rideObjectIndex,
-            entranceObject: 0,
-            colour1: 0,
-            colour2: 0,
-            inspectionInterval: 2
-          };
-        },
-        (result, state) => {
-          if (typeof result.ride === "number") {
-            state.rideIds[ride.id] = result.ride;
-          }
-        },
-        { critical: true, rideId: ride.id }
-      )
-    );
+    steps.push(createRideCreateStep(ride));
 
     const track = ride.track ?? null;
-    const isRawVisualRide = track?.some((segment) => segment.raw === true) ?? false;
     if (track !== null && track.length > 0) {
       for (let index = 0; index < track.length; index += 1) {
         const segment = track[index];
@@ -267,7 +245,7 @@ namespace RctaiBuilder {
       steps.push(createTrackStep(ride, { type: 0 }, 0, fallbackBuildZ));
     }
 
-    if (!isRawVisualRide) {
+    if (!isRawVisualRide(ride)) {
       steps.push(createEntranceExitStep(ride, false, fallbackBuildZ), createEntranceExitStep(ride, true, fallbackBuildZ));
     }
 
@@ -283,30 +261,74 @@ namespace RctaiBuilder {
       createAppearanceStep(ride, RIDE_APPEARANCE_TRACK_SUPPORTS, ride.colours?.support ?? 0, "supports")
     );
 
-    if (!isRawVisualRide && shouldAutoOpenRide(ride)) {
-      steps.push(
-        RctaiBuilder.createGameActionStep(
-          `open ride ${ride.id}`,
-          "ridesetstatus",
-          (_adapter, state) => {
-            if (state.failedRideIds[ride.id] === true) {
-              return null;
-            }
-            const rideId = state.rideIds[ride.id];
-            return rideId === undefined ? null : { ride: rideId, status: 1 };
-          },
-          undefined,
-          { critical: true, rideId: ride.id }
-        )
-      );
-    }
-
     return steps;
   }
 
-  function shouldAutoOpenRide(ride: RctaiBuilder.RidePlan): boolean {
+  function isRawVisualRide(ride: RctaiBuilder.RidePlan): boolean {
     const track = ride.track ?? null;
-    return track === null || track.length <= 1;
+    return track?.some((segment) => segment.raw === true) ?? false;
+  }
+
+  function createRideCreateStep(ride: RctaiBuilder.RidePlan): RctaiBuilder.QueuedStep {
+    return RctaiBuilder.createAdapterStep(`create ride ${ride.id}`, (adapter, state, done) => {
+      const resolved = adapter.resolveRideObject(ride.rideType, ride.rideObject ?? null);
+      if (resolved === null) {
+        done({
+          error: 1,
+          errorTitle: "Ride object unavailable",
+          errorMessage: `No loaded or installed ride object supports ${ride.id} (${ride.rideType})`
+        });
+        return;
+      }
+
+      state.rideTypes[ride.id] = resolved.rideTypeId;
+      adapter.executeAction(
+        "ridecreate",
+        {
+          rideType: resolved.rideTypeId,
+          rideObject: resolved.rideObjectIndex,
+          entranceObject: 0,
+          colour1: 0,
+          colour2: 0,
+          inspectionInterval: 2
+        },
+        (result) => {
+          if (result.error !== undefined && result.error !== 0) {
+            done(result);
+            return;
+          }
+          if (typeof result.ride !== "number") {
+            done({
+              error: 1,
+              errorTitle: "Ride create failed",
+              errorMessage: `OpenRCT2 did not return a ride id for ${ride.id}`
+            });
+            return;
+          }
+          state.rideIds[ride.id] = result.ride;
+          done(result);
+        }
+      );
+    }, { critical: true, rideId: ride.id });
+  }
+
+  function createOpenRideStep(ride: RctaiBuilder.RidePlan): RctaiBuilder.QueuedStep {
+    return RctaiBuilder.createAdapterStep(`open ride ${ride.id}`, (adapter, state, done) => {
+      if (state.failedRideIds[ride.id] === true) {
+        done({});
+        return;
+      }
+      const rideId = state.rideIds[ride.id];
+      if (rideId === undefined) {
+        done({
+          error: 1,
+          errorTitle: "Ride missing",
+          errorMessage: `No OpenRCT2 ride id exists for ${ride.id}`
+        });
+        return;
+      }
+      adapter.executeAction("ridesetstatus", { ride: rideId, status: 1 }, done);
+    }, { critical: true, rideId: ride.id });
   }
 
   function createTrackStep(
