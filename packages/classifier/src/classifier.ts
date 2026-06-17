@@ -483,7 +483,7 @@ function intensityFor(family: RideFamily, axes: Axes): ClassifiedRide["intensity
 
 function signFor(pr: PullRequestWork, family: RideFamily, axes: Axes): string {
   const prLabel = pr.number === null || pr.number === undefined ? pr.id : `PR #${pr.number}`;
-  const title = shorten(pr.title, WEIGHTS.display.signTitleMaxLength);
+  const title = shorten(signTitleFor(pr), WEIGHTS.display.signTitleMaxLength);
   const author = pr.author ?? "unknown";
   const tags: string[] = [];
 
@@ -500,6 +500,17 @@ function signFor(pr: PullRequestWork, family: RideFamily, axes: Axes): string {
   }
 
   return [`${prLabel} - ${title} (${author})`, ...tags].join(" ");
+}
+
+function signTitleFor(pr: PullRequestWork): string {
+  if (pr.number === null || pr.number === undefined) {
+    return pr.title;
+  }
+
+  const stripped = pr.title
+    .replace(new RegExp(`^\\s*(?:PR\\s*#?${pr.number}|#${pr.number})\\s*[:\\-]?\\s*`, "i"), "")
+    .trim();
+  return stripped.length > 0 ? stripped : pr.title;
 }
 
 function roundAxes(axes: Axes): Axes {

@@ -99,6 +99,22 @@ test("maps the most low-code work in a large batch to stalls by relative distrib
   equal(ridesById["DIST-019"]?.family, "stall");
 });
 
+test("does not repeat a PR label in ride signs when the title already has one", () => {
+  const model = workModelWithPrs([
+    {
+      ...makePr(151763, {
+        feature: 1
+      }),
+      id: "SES-024",
+      number: 151763,
+      title: "PR #151763: Update local command caveat"
+    }
+  ]);
+  const [ride] = classifyWorkModel(model, { rideProfiles });
+
+  equal(ride?.sign, "PR #151763 - Update local command caveat (agent)");
+});
+
 function workModelWithPrs(prs: PullRequestWork[]): WorkModel {
   return {
     schemaVersion: 1,

@@ -133,6 +133,14 @@ namespace RctaiBuilder {
       return this.adapter.inspectPark();
     }
 
+    inspectTracks(rideIds: number[] | null): RctaiBuilder.ParkInspectionTrack[] {
+      return this.adapter.inspectTracks(rideIds);
+    }
+
+    inspectTrackTraversals(rideIds: number[] | null): RctaiBuilder.ParkInspectionTrackTraversal[] {
+      return this.adapter.inspectTrackTraversals(rideIds);
+    }
+
     inspectTrackSegments(types: number[]): Record<string, RctaiBuilder.TrackSegmentInfo | null> {
       return this.adapter.inspectTrackSegments(types);
     }

@@ -31,6 +31,8 @@ namespace RctaiBuilder {
     enqueueSave(name: string): string;
     getStatus(): RctaiBuilder.BuildStatus;
     inspectPark(): RctaiBuilder.ParkInspection;
+    inspectTracks(rideIds: number[] | null): RctaiBuilder.ParkInspectionTrack[];
+    inspectTrackTraversals(rideIds: number[] | null): RctaiBuilder.ParkInspectionTrackTraversal[];
     inspectTrackSegments(types: number[]): Record<string, RctaiBuilder.TrackSegmentInfo | null>;
     resetRuntimeEvents(): void;
     setGameSpeed(speed: number, callback: (result: RctaiBuilder.GameActionResultLike) => void): void;
@@ -180,6 +182,38 @@ namespace RctaiBuilder {
       });
     }
 
+    if (request.method === "POST" && request.path === "/inspect-tracks") {
+      const parsedBody = parseJsonBody(request.body);
+      if (!parsedBody.ok) {
+        return json(400, { error: parsedBody.error });
+      }
+      const parsedFilter = parseRideIdFilter(parsedBody.value);
+      if (!parsedFilter.ok) {
+        return json(400, { error: parsedFilter.error });
+      }
+      return json(200, {
+        status: "ok",
+        version: RctaiBuilder.VERSION,
+        tracks: controller.inspectTracks(parsedFilter.rideIds)
+      });
+    }
+
+    if (request.method === "POST" && request.path === "/inspect-track-traversals") {
+      const parsedBody = parseJsonBody(request.body);
+      if (!parsedBody.ok) {
+        return json(400, { error: parsedBody.error });
+      }
+      const parsedFilter = parseRideIdFilter(parsedBody.value);
+      if (!parsedFilter.ok) {
+        return json(400, { error: parsedFilter.error });
+      }
+      return json(200, {
+        status: "ok",
+        version: RctaiBuilder.VERSION,
+        traversals: controller.inspectTrackTraversals(parsedFilter.rideIds)
+      });
+    }
+
     if (request.method === "GET" && request.path === "/track-segments") {
       const types = parseTrackSegmentTypes(request.query.types ?? "");
       return json(200, {
@@ -247,6 +281,8 @@ namespace RctaiBuilder {
       request.path === "/health" ||
       request.path === "/inspect" ||
       request.path === "/inspect-footpaths" ||
+      request.path === "/inspect-tracks" ||
+      request.path === "/inspect-track-traversals" ||
       request.path === "/track-segments" ||
       request.path === "/build" ||
       request.path === "/clear" ||
@@ -322,6 +358,27 @@ namespace RctaiBuilder {
       return footpaths;
     }
     return footpaths.filter((footpath) => filter.has(`${footpath.x},${footpath.y}`));
+  }
+
+  function parseRideIdFilter(input: unknown): { ok: true; rideIds: number[] | null } | { ok: false; error: string } {
+    const rideIds = typeof input === "object" && input !== null
+      ? (input as { rideIds?: unknown }).rideIds
+      : undefined;
+    if (rideIds === undefined || rideIds === "all") {
+      return { ok: true, rideIds: null };
+    }
+    if (!Array.isArray(rideIds)) {
+      return { ok: false, error: "rideIds must be an array of non-negative integers or \"all\"" };
+    }
+
+    const result: number[] = [];
+    for (const [index, rideId] of rideIds.entries()) {
+      if (!Number.isInteger(rideId) || rideId < 0) {
+        return { ok: false, error: `rideIds[${index}] must be a non-negative integer` };
+      }
+      result.push(rideId);
+    }
+    return { ok: true, rideIds: result };
   }
 
   function isCoordLike(input: unknown): input is RctaiBuilder.Coord {

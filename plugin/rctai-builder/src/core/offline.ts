@@ -129,6 +129,14 @@ namespace RctaiBuilder {
       };
     }
 
+    inspectTracks(): RctaiBuilder.ParkInspectionTrack[] {
+      return [];
+    }
+
+    inspectTrackTraversals(): RctaiBuilder.ParkInspectionTrackTraversal[] {
+      return [];
+    }
+
     resetRuntimeEvents(): void {
       // Offline validation has no runtime event source.
     }

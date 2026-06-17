@@ -213,6 +213,38 @@ namespace RctaiBuilder {
     station?: number | null;
   }
 
+  export interface ParkInspectionTrack {
+    x: number;
+    y: number;
+    z: number;
+    direction: number;
+    trackType: number;
+    rideType: number;
+    ride: number;
+    sequence: number | null;
+    station: number | null;
+    elementIndex?: number;
+  }
+
+  export interface ParkInspectionTrackTraversal {
+    ride: number;
+    station: number;
+    closed: boolean;
+    complete: boolean;
+    steps: number;
+    expectedSegments: number;
+    visitedSegments: number;
+    start: CoordD | null;
+    end: CoordD | null;
+    reason: string | null;
+    repeatKey?: string | null;
+    repeatFirstSeen?: number | null;
+    repeatAt?: number | null;
+    visitedKeys?: string[];
+    missingKeys?: string[];
+    unexpectedKeys?: string[];
+  }
+
   export interface BuilderAdapter {
     executeAction(
       action: GameActionName,
@@ -229,6 +261,8 @@ namespace RctaiBuilder {
     clearPathsAndScenery(callback: (result: GameActionResultLike) => void): void;
     getExistingRideIds(): number[];
     inspectPark(): ParkInspection;
+    inspectTracks(rideIds: number[] | null): ParkInspectionTrack[];
+    inspectTrackTraversals(rideIds: number[] | null): ParkInspectionTrackTraversal[];
     resetRuntimeEvents(): void;
     setGameSpeed(speed: number, callback: (result: GameActionResultLike) => void): void;
     savePark(name: string, callback: (result: GameActionResultLike) => void): void;

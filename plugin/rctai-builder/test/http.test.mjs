@@ -67,6 +67,38 @@ test("routes park inspection", () => {
   assert.deepEqual(response.body.park.footpaths, []);
 });
 
+test("routes filtered track inspection", () => {
+  const active = controller();
+  const response = builder.handleHttpRequest(
+    request("POST", "/inspect-tracks", JSON.stringify({ rideIds: [1, 2] })),
+    active
+  );
+  const invalid = builder.handleHttpRequest(
+    request("POST", "/inspect-tracks", JSON.stringify({ rideIds: [-1] })),
+    active
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.tracks, []);
+  assert.equal(invalid.status, 400);
+});
+
+test("routes filtered track traversal inspection", () => {
+  const active = controller();
+  const response = builder.handleHttpRequest(
+    request("POST", "/inspect-track-traversals", JSON.stringify({ rideIds: [1, 2] })),
+    active
+  );
+  const invalid = builder.handleHttpRequest(
+    request("POST", "/inspect-track-traversals", JSON.stringify({ rideIds: ["bad"] })),
+    active
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.traversals, []);
+  assert.equal(invalid.status, 400);
+});
+
 test("routes build and enqueues valid park plans", () => {
   const body = JSON.stringify(samplePlan);
   const active = controller();

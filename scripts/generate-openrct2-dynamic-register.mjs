@@ -321,7 +321,7 @@ function evolvedName(name, work, count) {
 
 function evolvedSign(sign, work, count) {
   const sessionText = count === 1 ? "1 transcript" : `${count} transcripts`;
-  const base = sign ?? `${work.id} - ${work.title}`;
+  const base = cleanDuplicatePrLabel(sign ?? `${work.id} - ${work.title}`);
   return `${base} EVOLVED ${sessionText}`;
 }
 
@@ -451,13 +451,49 @@ function buildDynamicTrack({ ride, axes, seed, sideA, sideB, stationLength, turn
 
   return [
     ...station,
-    ...buildConnectedSide(frontSide, "front", { ride, axes, seed: sideSeed, hillHeight, allowLoop, relation }),
+    ...buildConnectedSide(frontSide, "front", {
+      ride,
+      axes,
+      seed: sideSeed,
+      hillHeight,
+      allowLoop,
+      relation,
+      previousTurnType: null,
+      nextTurnType: turnType
+    }),
     { type: turnType },
-    ...buildConnectedSide(shortSide, "side-a", { ride, axes, seed: sideSeed + 11, hillHeight, allowLoop, relation }),
+    ...buildConnectedSide(shortSide, "side-a", {
+      ride,
+      axes,
+      seed: sideSeed + 11,
+      hillHeight,
+      allowLoop,
+      relation,
+      previousTurnType: turnType,
+      nextTurnType: turnType
+    }),
     { type: turnType },
-    ...buildConnectedSide(backSide, "back", { ride, axes, seed: sideSeed + 23, hillHeight, allowLoop, relation }),
+    ...buildConnectedSide(backSide, "back", {
+      ride,
+      axes,
+      seed: sideSeed + 23,
+      hillHeight,
+      allowLoop,
+      relation,
+      previousTurnType: turnType,
+      nextTurnType: turnType
+    }),
     { type: turnType },
-    ...buildConnectedSide(shortSide, "final", { ride, axes, seed: sideSeed + 37, hillHeight, allowLoop, relation }),
+    ...buildConnectedSide(shortSide, "final", {
+      ride,
+      axes,
+      seed: sideSeed + 37,
+      hillHeight,
+      allowLoop,
+      relation,
+      previousTurnType: turnType,
+      nextTurnType: turnType
+    }),
     { type: turnType }
   ];
 }
@@ -488,7 +524,17 @@ function buildConnectedSide(length, role, context) {
 
   for (const candidate of candidates) {
     const advance = forwardAdvance(candidate);
-    if (advance > 0 && advance <= remaining) {
+    const previousType = lastTrackType(pieces) ?? context.previousTurnType;
+    const nextType = context.nextTurnType;
+    const reservedBefore =
+      previousType !== null && trackStartsWithSameTurnDirection(candidate, previousType) ? 1 : 0;
+    const reservedAfter =
+      nextType !== null && trackEndsWithSameTurnDirection(candidate, nextType) ? 1 : 0;
+    if (advance > 0 && advance + reservedBefore + reservedAfter <= remaining) {
+      if (reservedBefore > 0) {
+        pieces.push({ type: FLAT });
+        remaining -= 1;
+      }
       pieces.push(...candidate);
       remaining -= advance;
     }
@@ -496,6 +542,36 @@ function buildConnectedSide(length, role, context) {
 
   pieces.push(...repeat(FLAT, remaining));
   return pieces;
+}
+
+function lastTrackType(track) {
+  return track[track.length - 1]?.type ?? null;
+}
+
+function trackStartsWithSameTurnDirection(track, type) {
+  const first = track[0];
+  return first !== undefined && sameTurnDirection(first.type, type);
+}
+
+function trackEndsWithSameTurnDirection(track, type) {
+  const last = track[track.length - 1];
+  return last !== undefined && sameTurnDirection(last.type, type);
+}
+
+function sameTurnDirection(left, right) {
+  const leftDirection = turnDirection(left);
+  const rightDirection = turnDirection(right);
+  return leftDirection !== null && leftDirection === rightDirection;
+}
+
+function turnDirection(type) {
+  if ([LEFT_TURN_5, BANKED_LEFT_TURN_5, LEFT_TURN_3].includes(type)) {
+    return "left";
+  }
+  if ([RIGHT_TURN_5, BANKED_RIGHT_TURN_5, RIGHT_TURN_3].includes(type)) {
+    return "right";
+  }
+  return null;
 }
 
 function forwardAdvance(track) {
@@ -1445,6 +1521,9 @@ function stripLayoutHints(ride) {
   delete clean.__layout;
   delete clean.__work;
   delete clean.__evolution;
+  if (typeof clean.sign === "string") {
+    clean.sign = cleanDuplicatePrLabel(clean.sign);
+  }
   if (Array.isArray(clean.track)) {
     clean.track = clean.track.map((segment) => {
       const rest = { ...segment };
@@ -1454,6 +1533,12 @@ function stripLayoutHints(ride) {
     });
   }
   return clean;
+}
+
+function cleanDuplicatePrLabel(value) {
+  return value
+    .replace(/^(PR #(\d+)) - PR #\2:\s*/i, "$1 - ")
+    .replace(/^(PR #(\d+)) - PR #\2\s+-\s*/i, "$1 - ");
 }
 
 function unique(values) {

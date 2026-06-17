@@ -206,6 +206,78 @@ namespace RctaiBuilder {
       };
     }
 
+    inspectTracks(rideIds: number[] | null): RctaiBuilder.ParkInspectionTrack[] {
+      const filter = rideIds === null ? null : new Set(rideIds);
+      const tracks: RctaiBuilder.ParkInspectionTrack[] = [];
+      for (let x = 0; x < map.size.x; x += 1) {
+        for (let y = 0; y < map.size.y; y += 1) {
+          const tile = map.getTile(x, y);
+          for (let elementIndex = 0; elementIndex < tile.elements.length; elementIndex += 1) {
+            const element = tile.elements[elementIndex];
+            if (element === undefined || element.type !== "track" || (filter !== null && !filter.has(element.ride))) {
+              continue;
+            }
+            tracks.push({
+              x,
+              y,
+              z: element.baseZ,
+              direction: element.direction,
+              trackType: element.trackType,
+              rideType: element.rideType,
+              ride: element.ride,
+              sequence: element.sequence,
+              station: null,
+              elementIndex
+            });
+          }
+        }
+      }
+      return tracks;
+    }
+
+    inspectTrackTraversals(rideIds: number[] | null): RctaiBuilder.ParkInspectionTrackTraversal[] {
+      const filter = rideIds === null ? null : new Set(rideIds);
+      const traversals: RctaiBuilder.ParkInspectionTrackTraversal[] = [];
+      const expectedKeysByRide = trackTraversalKeysByRide();
+
+      for (const ride of map.rides) {
+        if (filter !== null && !filter.has(ride.id)) {
+          continue;
+        }
+
+        const expectedKeys = expectedKeysByRide[ride.id] ?? [];
+        const expectedSegments = expectedKeys.length;
+        const stations = ride.stations
+          .map((station, stationIndex) => ({ station, stationIndex }))
+          .filter(({ station }) => station.start !== null && station.length > 0);
+
+        if (stations.length === 0) {
+          traversals.push({
+            ride: ride.id,
+            station: -1,
+            closed: false,
+            complete: expectedSegments === 0,
+            steps: 0,
+            expectedSegments,
+            visitedSegments: 0,
+            start: null,
+            end: null,
+            reason: expectedSegments === 0 ? null : "ride has track elements but no station start",
+            visitedKeys: [],
+            missingKeys: expectedKeys,
+            unexpectedKeys: []
+          });
+          continue;
+        }
+
+        for (const { station, stationIndex } of stations) {
+          traversals.push(inspectStationTraversal(ride.id, stationIndex, station.start, expectedKeys));
+        }
+      }
+
+      return traversals;
+    }
+
     resetRuntimeEvents(): void {
       this.crashEvents.length = 0;
     }
@@ -355,6 +427,240 @@ namespace RctaiBuilder {
       }
     }
     return footpaths;
+  }
+
+  function trackTraversalKeysByRide(): Record<number, string[]> {
+    const keys: Record<number, string[]> = {};
+    for (let x = 0; x < map.size.x; x += 1) {
+      for (let y = 0; y < map.size.y; y += 1) {
+        const tile = map.getTile(x, y);
+        for (const element of tile.elements) {
+          if (element.type === "track" && element.sequence === 0) {
+            const segment = context.getTrackSegment(element.trackType);
+            if (segment === null) {
+              continue;
+            }
+            const rideKeys = keys[element.ride] ?? [];
+            rideKeys.push(trackElementTraversalKey(x, y, element));
+            keys[element.ride] = rideKeys;
+          }
+        }
+      }
+    }
+    for (const rideKeys of Object.values(keys)) {
+      rideKeys.sort((left, right) => left.localeCompare(right));
+    }
+    return keys;
+  }
+
+  function inspectStationTraversal(
+    rideId: number,
+    stationIndex: number,
+    stationStart: CoordsXYZ | null,
+    expectedKeys: string[]
+  ): RctaiBuilder.ParkInspectionTrackTraversal {
+    const expectedSegments = expectedKeys.length;
+    const iteratorStart = firstUsableTrackIterator(rideId, stationStart);
+    if (iteratorStart === null) {
+      return {
+        ride: rideId,
+        station: stationIndex,
+        closed: false,
+        complete: false,
+        steps: 0,
+        expectedSegments,
+        visitedSegments: 0,
+        start: copyCoord(stationStart),
+        end: null,
+        reason: "OpenRCT2 did not create a track iterator for any sequence-0 track element",
+        visitedKeys: [],
+        missingKeys: expectedKeys,
+        unexpectedKeys: []
+      };
+    }
+
+    const iterator = iteratorStart.iterator;
+    const startKey = trackIteratorKey(iterator);
+    const start = copyCoordD(iterator.position);
+    const visited = new Set<string>();
+    const visitedKeys: string[] = [];
+    const maxSteps = Math.max(expectedSegments * 4 + 8, 64);
+    let end: RctaiBuilder.CoordD | null = null;
+    let closed = false;
+    let reason: string | null = null;
+    let repeatKey: string | null = null;
+    let repeatFirstSeen: number | null = null;
+    let repeatAt: number | null = null;
+
+    for (let step = 0; step < maxSteps; step += 1) {
+      const key = trackIteratorKey(iterator);
+      if (visited.has(key)) {
+        closed = key === startKey;
+        repeatKey = key;
+        repeatFirstSeen = [...visited].indexOf(key);
+        repeatAt = step;
+        reason = closed ? null : "traversal reached a repeated non-start segment";
+        break;
+      }
+
+      visited.add(key);
+      visitedKeys.push(key);
+      end = copyCoordD(iterator.position);
+      if (!iterator.next()) {
+        reason = "OpenRCT2 track iterator reached an open end";
+        break;
+      }
+    }
+
+    if (!closed && reason === null) {
+      reason = "OpenRCT2 track iterator exceeded the expected circuit length";
+    }
+
+    const expected = new Set(expectedKeys);
+    const missingKeys = expectedKeys.filter((key) => !visited.has(key));
+    const unexpectedKeys = visitedKeys.filter((key) => !expected.has(key));
+    const complete = missingKeys.length === 0 && unexpectedKeys.length === 0;
+    if (closed && !complete && reason === null) {
+      reason = "OpenRCT2 track iterator did not cover exactly the placed sequence-0 track elements";
+    }
+
+    return {
+      ride: rideId,
+      station: stationIndex,
+      closed,
+      complete,
+      steps: visited.size,
+      expectedSegments,
+      visitedSegments: visited.size,
+      start,
+      end,
+      reason,
+      repeatKey,
+      repeatFirstSeen,
+      repeatAt,
+      visitedKeys,
+      missingKeys,
+      unexpectedKeys
+    };
+  }
+
+  function firstUsableTrackIterator(
+    rideId: number,
+    stationStart: CoordsXYZ | null
+  ): { iterator: TrackIterator; location: { x: number; y: number; elementIndex: number } } | null {
+    const candidates = uniqueTrackElementLocations([
+      findTrackElementAt(stationStart, rideId),
+      ...findTrackSequenceStartElements(rideId)
+    ]);
+
+    for (const location of candidates) {
+      const iterator = getTrackIteratorAt(location);
+      if (iterator !== null && iterator.segment !== null) {
+        return { iterator, location };
+      }
+    }
+
+    return null;
+  }
+
+  function findTrackSequenceStartElements(rideId: number): Array<{ x: number; y: number; elementIndex: number }> {
+    const locations: Array<{ x: number; y: number; elementIndex: number }> = [];
+    for (let x = 0; x < map.size.x; x += 1) {
+      for (let y = 0; y < map.size.y; y += 1) {
+        const tile = map.getTile(x, y);
+        for (let elementIndex = 0; elementIndex < tile.elements.length; elementIndex += 1) {
+          const element = tile.elements[elementIndex];
+          if (element !== undefined && element.type === "track" && element.ride === rideId && element.sequence === 0) {
+            locations.push({ x, y, elementIndex });
+          }
+        }
+      }
+    }
+    return locations;
+  }
+
+  function uniqueTrackElementLocations(
+    locations: Array<{ x: number; y: number; elementIndex: number } | null>
+  ): Array<{ x: number; y: number; elementIndex: number }> {
+    const seen: Record<string, boolean> = {};
+    const result: Array<{ x: number; y: number; elementIndex: number }> = [];
+    for (const location of locations) {
+      if (location === null) {
+        continue;
+      }
+      const key = `${location.x},${location.y},${location.elementIndex}`;
+      if (seen[key] === true) {
+        continue;
+      }
+      seen[key] = true;
+      result.push(location);
+    }
+    return result;
+  }
+
+  function getTrackIteratorAt(location: { x: number; y: number; elementIndex: number }): TrackIterator | null {
+    try {
+      const tileIterator = map.getTrackIterator({ x: location.x, y: location.y }, location.elementIndex);
+      if (tileIterator !== null) {
+        return tileIterator;
+      }
+    } catch {
+      // Try world coordinates below.
+    }
+
+    try {
+      return map.getTrackIterator({ x: location.x * 32, y: location.y * 32 }, location.elementIndex);
+    } catch {
+      return null;
+    }
+  }
+
+  function findTrackElementAt(coord: CoordsXYZ | null, rideId: number): { x: number; y: number; elementIndex: number } | null {
+    if (coord === null) {
+      return null;
+    }
+
+    const x = coord.x >= map.size.x ? Math.floor(coord.x / 32) : coord.x;
+    const y = coord.y >= map.size.y ? Math.floor(coord.y / 32) : coord.y;
+    const tile = map.getTile(x, y);
+    let fallback: { x: number; y: number; elementIndex: number } | null = null;
+
+    for (let elementIndex = 0; elementIndex < tile.elements.length; elementIndex += 1) {
+      const element = tile.elements[elementIndex];
+      if (element === undefined || element.type !== "track" || element.ride !== rideId) {
+        continue;
+      }
+      const location = { x, y, elementIndex };
+      if (fallback === null) {
+        fallback = location;
+      }
+      if (element.sequence === 0 && element.baseZ === coord.z) {
+        return location;
+      }
+    }
+
+    return fallback;
+  }
+
+  function trackIteratorKey(iterator: TrackIterator): string {
+    const position = iterator.position;
+    return [
+      position.x,
+      position.y,
+      position.z,
+      position.direction,
+      iterator.segment?.type ?? "none"
+    ].join(",");
+  }
+
+  function trackElementTraversalKey(x: number, y: number, element: TrackElement): string {
+    return [
+      x * 32,
+      y * 32,
+      element.baseZ,
+      element.direction,
+      element.trackType
+    ].join(",");
   }
 
   function copyCoord(coord: CoordsXYZ | null): RctaiBuilder.CoordD | null {

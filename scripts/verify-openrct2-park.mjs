@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* global fetch */
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -10,11 +10,8 @@ const DEFAULT_HOST_PORT = 11753;
 const DEFAULT_BUILDER_PORT = 6427;
 const FIRST_MONTH_TICKS = 16_384;
 const FOOTPATH_BATCH_SIZE = 1_000;
+const TRACK_RIDE_BATCH_SIZE = 12;
 const ANSI_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
-
-const BEGIN_STATION = 2;
-const END_STATION = 1;
-const MIDDLE_STATION = 3;
 
 const options = parseArgs(process.argv.slice(2));
 const plan = readJson(resolve(process.cwd(), options.planPath));
@@ -26,28 +23,11 @@ if (!existsSync(parkPath)) {
 
 const openrct2 = resolveOpenRCT2(options.openrct2);
 const issues = [];
-
-if (options.simulateTicks > 0) {
-  const result = spawnSync(openrct2, ["simulate", parkPath, String(options.simulateTicks)], {
-    encoding: "utf8",
-    stdio: "pipe"
-  });
-  if (result.status !== 0) {
-    issues.push(`OpenRCT2 simulate failed: ${stripAnsi(result.stderr || result.stdout || `exit ${result.status}`)}`);
-  } else {
-    process.stdout.write(`simulate passed: ${options.simulateTicks} ticks\n`);
-  }
-}
-
-const host = spawn(openrct2, ["host", parkPath, "--headless", "--port", String(options.hostPort)], {
-  stdio: ["ignore", "pipe", "pipe"]
-});
 const hostOutput = [];
-host.stdout.on("data", (chunk) => rememberOutput(hostOutput, chunk));
-host.stderr.on("data", (chunk) => rememberOutput(hostOutput, chunk));
+let host = null;
 
 try {
-  await waitForBuilder(options.builderPort, options.startTimeoutMs);
+  host = await ensureLiveBuilder(openrct2, parkPath, options.hostPort, options.builderPort, options.startTimeoutMs, hostOutput);
   await postJson(options.builderPort, "/reset-runtime-events", {});
 
   let inspection = await getInspection(options.builderPort, plan);
@@ -82,10 +62,12 @@ try {
 } catch (error) {
   issues.push(error instanceof Error ? error.message : String(error));
 } finally {
-  host.kill("SIGTERM");
-  await delay(500);
-  if (host.exitCode === null) {
-    host.kill("SIGKILL");
+  if (host !== null) {
+    host.kill("SIGTERM");
+    await delay(500);
+    if (host.exitCode === null) {
+      host.kill("SIGKILL");
+    }
   }
 }
 
@@ -105,7 +87,6 @@ function parseArgs(args) {
     openrct2: DEFAULT_OPENRCT2,
     hostPort: DEFAULT_HOST_PORT,
     builderPort: DEFAULT_BUILDER_PORT,
-    simulateTicks: FIRST_MONTH_TICKS,
     runtimeTicks: 0,
     runtimeTimeoutMs: 180_000,
     startTimeoutMs: 30_000,
@@ -126,8 +107,6 @@ function parseArgs(args) {
       parsed.hostPort = readInteger(readFlag(args, ++index, arg), arg);
     } else if (arg === "--builder-port") {
       parsed.builderPort = readInteger(readFlag(args, ++index, arg), arg);
-    } else if (arg === "--simulate-ticks") {
-      parsed.simulateTicks = readInteger(readFlag(args, ++index, arg), arg);
     } else if (arg === "--runtime-ticks") {
       parsed.runtimeTicks = readInteger(readFlag(args, ++index, arg), arg);
     } else if (arg === "--runtime-timeout-ms") {
@@ -138,8 +117,6 @@ function parseArgs(args) {
       parsed.pollMs = readInteger(readFlag(args, ++index, arg), arg);
     } else if (arg === "--first-month-runtime") {
       parsed.runtimeTicks = FIRST_MONTH_TICKS;
-    } else if (arg === "--no-simulate") {
-      parsed.simulateTicks = 0;
     } else if (arg === "-h" || arg === "--help") {
       usage(0);
     } else {
@@ -162,8 +139,6 @@ function usage(exitCode) {
     "  --openrct2 <path>          OpenRCT2 binary. Defaults to $OPENRCT2_BIN, then openrct2.",
     "  --host-port <port>         OpenRCT2 network host port. Default: 11753.",
     "  --builder-port <port>      RCTAI builder plugin HTTP port. Default: 6427.",
-    "  --simulate-ticks <ticks>   Run OpenRCT2 CLI simulate before inspection. Default: 16384.",
-    "  --no-simulate              Skip CLI simulate.",
     "  --runtime-ticks <ticks>    Wait for live headless ticks and fail on plugin crash events.",
     "  --first-month-runtime      Shorthand for --runtime-ticks 16384."
   ].join("\n");
@@ -201,6 +176,30 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
+async function ensureLiveBuilder(openrct2, parkPath, hostPort, builderPort, timeoutMs, hostOutput) {
+  if (await builderIsReady(builderPort)) {
+    process.stdout.write(`using live OpenRCT2 builder on 127.0.0.1:${builderPort}\n`);
+    return null;
+  }
+
+  const host = spawn(openrct2, ["host", parkPath, "--headless", "--port", String(hostPort)], {
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  host.stdout.on("data", (chunk) => rememberOutput(hostOutput, chunk));
+  host.stderr.on("data", (chunk) => rememberOutput(hostOutput, chunk));
+  await waitForBuilder(builderPort, timeoutMs);
+  return host;
+}
+
+async function builderIsReady(port) {
+  try {
+    const response = await fetchJson(port, "/health");
+    return response.status === "ok";
+  } catch {
+    return false;
+  }
+}
+
 async function waitForBuilder(port, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -220,7 +219,11 @@ async function waitForBuilder(port, timeoutMs) {
 async function getInspection(port, plan) {
   const inspection = await postJson(port, "/inspect", { footpaths: [] });
   const coords = inspectionFootpathCoords(plan, inspection.park.rides ?? []);
+  const trackRideIds = plannedTrackRideIds(plan, inspection.park.rides ?? []);
   inspection.park.footpaths = await fetchInspectionFootpaths(port, coords);
+  inspection.park.tracks = await fetchInspectionTracks(port, trackRideIds);
+  inspection.park.trackTraversals = await fetchInspectionTrackTraversals(port, trackRideIds);
+  inspection.park.trackSegments = await fetchInspectionTrackSegments(port, plannedTrackTypes(plan));
   return inspection;
 }
 
@@ -272,6 +275,69 @@ function dedupeFootpaths(footpaths) {
   return [...byKey.values()];
 }
 
+async function fetchInspectionTracks(port, rideIds) {
+  if (rideIds.length === 0) {
+    return [];
+  }
+  const tracks = [];
+  for (let index = 0; index < rideIds.length; index += TRACK_RIDE_BATCH_SIZE) {
+    const batch = rideIds.slice(index, index + TRACK_RIDE_BATCH_SIZE);
+    const response = await postJson(port, "/inspect-tracks", { rideIds: batch });
+    tracks.push(...(response.tracks ?? []));
+  }
+  return tracks;
+}
+
+async function fetchInspectionTrackTraversals(port, rideIds) {
+  if (rideIds.length === 0) {
+    return [];
+  }
+  const traversals = [];
+  for (let index = 0; index < rideIds.length; index += TRACK_RIDE_BATCH_SIZE) {
+    const batch = rideIds.slice(index, index + TRACK_RIDE_BATCH_SIZE);
+    const response = await postJson(port, "/inspect-track-traversals", { rideIds: batch });
+    traversals.push(...(response.traversals ?? []));
+  }
+  return traversals;
+}
+
+async function fetchInspectionTrackSegments(port, types) {
+  if (types.length === 0) {
+    return {};
+  }
+  const response = await fetchJson(port, `/track-segments?types=${types.join(",")}`);
+  return response.segments ?? {};
+}
+
+function plannedTrackRideIds(plan, actualRides) {
+  const ids = [];
+  for (const expected of plan.rides ?? []) {
+    if (!requiresPlacedTrackValidation(expected)) {
+      continue;
+    }
+    const actual = actualRides.find((ride) => ride.name === expected.id || ride.name.startsWith(`${expected.id} `));
+    if (actual !== undefined) {
+      ids.push(actual.id);
+    }
+  }
+  return ids;
+}
+
+function plannedTrackTypes(plan) {
+  const types = new Set();
+  for (const ride of plan.rides ?? []) {
+    if (!requiresPlacedTrackValidation(ride)) {
+      continue;
+    }
+    for (const segment of ride.track ?? []) {
+      if (Number.isInteger(segment.type)) {
+        types.add(segment.type);
+      }
+    }
+  }
+  return [...types].sort((left, right) => left - right);
+}
+
 async function postJson(port, path, body) {
   const response = await fetch(`http://127.0.0.1:${port}${path}`, {
     method: "POST",
@@ -301,6 +367,9 @@ function validateInspection(plan, inspection, phase) {
   const footpaths = (inspection.park.footpaths ?? []).map((footpath) => normalizeInspectionCoord(footpath, plan));
   const footpathsByXY = pathTilesByXY(footpaths);
   const footpathTiles = new Set(footpaths.map((footpath) => coordKey(footpath)));
+  const tracksByRide = tracksByRideId(inspection.park.tracks ?? []);
+  const traversalsByRide = traversalsByRideId(inspection.park.trackTraversals ?? []);
+  const trackSegments = inspection.park.trackSegments ?? {};
   const entranceTiles = footpaths.filter(
     (footpath) => footpath.x === plan.park.entrance.x && footpath.y === plan.park.entrance.y
   );
@@ -346,6 +415,10 @@ function validateInspection(plan, inspection, phase) {
         }
       }
     }
+    if (requiresPlacedTrackValidation(expected)) {
+      phaseIssues.push(...validatePlacedTrackGraph(expected, actual, tracksByRide, trackSegments, phase));
+      phaseIssues.push(...validateTrackTraversal(expected, actual, traversalsByRide, phase));
+    }
   }
 
   for (const pathEdge of plan.paths ?? []) {
@@ -360,6 +433,388 @@ function validateInspection(plan, inspection, phase) {
   }
 
   return phaseIssues;
+}
+
+function validateTrackTraversal(ride, actual, traversalsByRide, phase) {
+  const traversals = traversalsByRide.get(actual.id) ?? [];
+  if (traversals.length === 0) {
+    return [`${phase}: ride ${ride.id} has no OpenRCT2 track traversal`];
+  }
+
+  const issues = [];
+  for (const traversal of traversals) {
+    if (!traversal.closed || !traversal.complete) {
+      const reason = traversal.reason === null || traversal.reason === undefined ? "unknown reason" : traversal.reason;
+      const missing = Array.isArray(traversal.missingKeys) ? traversal.missingKeys : [];
+      const unexpected = Array.isArray(traversal.unexpectedKeys) ? traversal.unexpectedKeys : [];
+      const examples = [
+        missing.length > 0 ? `missing ${missing.length}: ${missing.slice(0, 5).join("; ")}` : null,
+        unexpected.length > 0 ? `unexpected ${unexpected.length}: ${unexpected.slice(0, 5).join("; ")}` : null
+      ].filter((entry) => entry !== null);
+      issues.push(
+        `${phase}: ride ${ride.id} station ${traversal.station} track traversal failed: ` +
+          `${reason}; closed=${traversal.closed}, complete=${traversal.complete}, ` +
+          `visited ${traversal.visitedSegments}/${traversal.expectedSegments}` +
+          (examples.length > 0 ? `; ${examples.join("; ")}` : "")
+      );
+    }
+  }
+  return issues;
+}
+
+function validatePlacedTrackGraph(ride, actual, tracksByRide, trackSegments, phase) {
+  const issues = [];
+  const actualTracks = (tracksByRide.get(actual.id) ?? []).filter((track) => track.sequence === 0);
+  if (actualTracks.length === 0) {
+    return [`${phase}: ride ${ride.id} has no placed track elements`];
+  }
+
+  const firstSegment = ride.track[0];
+  if (firstSegment === undefined) {
+    return issues;
+  }
+
+  const firstMeta = trackSegmentInfo(trackSegments, firstSegment.type);
+  if (firstMeta === null) {
+    return [`${phase}: ride ${ride.id} has unknown track segment type ${firstSegment.type}`];
+  }
+
+  const firstDirection = normalizeDirection(firstSegment.direction ?? ride.rotation ?? 0);
+  const firstActual = actualTracks.find(
+    (track) =>
+      track.x === ride.position.x + (firstSegment.x ?? 0) &&
+      track.y === ride.position.y + (firstSegment.y ?? 0) &&
+      normalizeDirection(track.direction) === firstDirection &&
+      track.trackType === firstSegment.type
+  );
+  if (firstActual === undefined) {
+    return [
+      `${phase}: ride ${ride.id} is missing first placed track segment ${formatTrackExpectation({
+        x: ride.position.x + (firstSegment.x ?? 0),
+        y: ride.position.y + (firstSegment.y ?? 0),
+        z: firstSegment.z ?? 0,
+        direction: firstDirection,
+        trackType: firstSegment.type
+      })}`
+    ];
+  }
+
+  const buildZ = firstSegment.z ?? firstActual.z + firstMeta.beginZ;
+  const actualCounts = countedTrackKeys(actualTracks.map((track) => trackKey(track)));
+  const expectedCounts = new Map();
+  const missing = [];
+  let cursor = null;
+  let startCursor = null;
+  let endCursor = null;
+
+  for (let index = 0; index < ride.track.length; index += 1) {
+    const segment = ride.track[index];
+    if (segment.raw === true) {
+      continue;
+    }
+    const meta = trackSegmentInfo(trackSegments, segment.type);
+    if (meta === null) {
+      issues.push(`${phase}: ride ${ride.id} has unknown track segment type ${segment.type} at #${index}`);
+      continue;
+    }
+
+    if (cursor === null || hasExplicitTrackOrigin(segment)) {
+      cursor = {
+        x: ride.position.x + (segment.x ?? 0),
+        y: ride.position.y + (segment.y ?? 0),
+        z: segment.z ?? buildZ,
+        direction: normalizeDirection(segment.direction ?? ride.rotation ?? 0)
+      };
+      if (startCursor === null) {
+        startCursor = { ...cursor };
+      }
+    }
+
+    const expected = {
+      x: cursor.x,
+      y: cursor.y,
+      z: cursor.z - meta.beginZ,
+      direction: cursor.direction,
+      trackType: segment.type
+    };
+    const key = trackKey(expected);
+    expectedCounts.set(key, (expectedCounts.get(key) ?? 0) + 1);
+    const available = actualCounts.get(key) ?? 0;
+    if (available <= 0) {
+      missing.push({ index, expected });
+    } else {
+      actualCounts.set(key, available - 1);
+    }
+
+    cursor = advanceTrackCursor(cursor, meta);
+    endCursor = { ...cursor };
+  }
+
+  if (missing.length > 0) {
+    const examples = missing
+      .slice(0, 5)
+      .map((entry) => `#${entry.index} ${formatTrackExpectation(entry.expected)}`)
+      .join("; ");
+    issues.push(
+      `${phase}: ride ${ride.id} is missing ${missing.length} placed track segment(s); first missing: ${examples}`
+    );
+  }
+
+  const unexpected = [];
+  for (const [key, count] of actualCounts.entries()) {
+    if (count > 0 && !expectedCounts.has(key)) {
+      unexpected.push({ key, count });
+    }
+  }
+  if (unexpected.length > 0) {
+    const examples = unexpected
+      .slice(0, 5)
+      .map((entry) => `${entry.key}${entry.count > 1 ? ` x${entry.count}` : ""}`)
+      .join("; ");
+    issues.push(
+      `${phase}: ride ${ride.id} has ${unexpected.reduce((sum, entry) => sum + entry.count, 0)} unexpected placed track segment(s); first extra: ${examples}`
+    );
+  }
+
+  issues.push(...validateActualTrackComponents(ride, actualTracks, trackSegments, phase));
+
+  if (startCursor !== null && endCursor !== null && !sameTrackCursor(startCursor, endCursor)) {
+    issues.push(
+      `${phase}: ride ${ride.id} planned track cursor is not closed: start ${formatCursor(startCursor)}, end ${formatCursor(endCursor)}`
+    );
+  }
+
+  return issues;
+}
+
+function validateActualTrackComponents(ride, actualTracks, trackSegments, phase) {
+  const issues = [];
+  const nodes = [];
+  const nodesByPose = new Map();
+
+  for (let index = 0; index < actualTracks.length; index += 1) {
+    const track = actualTracks[index];
+    const meta = trackSegmentInfo(trackSegments, track.trackType);
+    if (meta === null) {
+      issues.push(`${phase}: ride ${ride.id} has actual track with unknown type ${track.trackType}`);
+      continue;
+    }
+    const start = actualTrackStartCursor(track, meta);
+    const node = {
+      key: actualTrackNodeKey(track, start, index),
+      track,
+      meta,
+      start
+    };
+    nodes.push(node);
+    const pose = trackPoseKey(start);
+    const group = nodesByPose.get(pose) ?? [];
+    group.push(node);
+    nodesByPose.set(pose, group);
+  }
+
+  if (nodes.length === 0) {
+    return issues;
+  }
+
+  const links = new Map(nodes.map((node) => [node.key, new Set()]));
+  const missingNext = [];
+  for (const node of nodes) {
+    const end = advanceTrackCursor(node.start, node.meta);
+    const nextNodes = nodesByPose.get(trackPoseKey(end)) ?? [];
+    if (nextNodes.length === 0) {
+      missingNext.push({ node, end });
+      continue;
+    }
+    for (const next of nextNodes) {
+      links.get(node.key)?.add(next.key);
+      links.get(next.key)?.add(node.key);
+    }
+  }
+
+  const components = trackComponents(nodes, links);
+  if (components.length > 1) {
+    const examples = components
+      .slice(0, 5)
+      .map((component) => `${component.length}: ${formatActualTrackNode(component[0])}`)
+      .join("; ");
+    issues.push(
+      `${phase}: ride ${ride.id} actual placed track has ${components.length} disconnected component(s); ` +
+        `sizes ${components.map((component) => component.length).join(", ")}; first components: ${examples}`
+    );
+  }
+
+  if (missingNext.length > 0) {
+    const examples = missingNext
+      .slice(0, 5)
+      .map((entry) => `${formatActualTrackNode(entry.node)} -> ${formatCursor(entry.end)}`)
+      .join("; ");
+    issues.push(
+      `${phase}: ride ${ride.id} actual placed track has ${missingNext.length} segment(s) whose next position has no placed segment; ` +
+        `first missing links: ${examples}`
+    );
+  }
+
+  return issues;
+}
+
+function requiresPlacedTrackValidation(ride) {
+  return (
+    Array.isArray(ride.track) &&
+    ride.track.length > 1 &&
+    !isTowerRide(ride) &&
+    !ride.track.some((segment) => segment.raw === true)
+  );
+}
+
+function isTowerRide(ride) {
+  return ride.rideType === "observation_tower" || ride.rideType === "roto_drop" || ride.rideType === "launched_freefall";
+}
+
+function tracksByRideId(tracks) {
+  const byRide = new Map();
+  for (const track of tracks) {
+    const group = byRide.get(track.ride) ?? [];
+    group.push(track);
+    byRide.set(track.ride, group);
+  }
+  return byRide;
+}
+
+function traversalsByRideId(traversals) {
+  const byRide = new Map();
+  for (const traversal of traversals) {
+    const group = byRide.get(traversal.ride) ?? [];
+    group.push(traversal);
+    byRide.set(traversal.ride, group);
+  }
+  return byRide;
+}
+
+function countedTrackKeys(keys) {
+  const counts = new Map();
+  for (const key of keys) {
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function actualTrackStartCursor(track, trackInfo) {
+  return {
+    x: track.x,
+    y: track.y,
+    z: track.z + trackInfo.beginZ,
+    direction: normalizeDirection(track.direction)
+  };
+}
+
+function actualTrackNodeKey(track, start, index) {
+  return `${trackPoseKey(start)},t${track.trackType},e${track.elementIndex ?? index}`;
+}
+
+function trackPoseKey(cursor) {
+  return `${cursor.x},${cursor.y},${cursor.z},d${normalizeDirection(cursor.direction)}`;
+}
+
+function trackComponents(nodes, links) {
+  const byKey = new Map(nodes.map((node) => [node.key, node]));
+  const unvisited = new Set(nodes.map((node) => node.key));
+  const components = [];
+
+  while (unvisited.size > 0) {
+    const start = unvisited.values().next().value;
+    const queue = [start];
+    const component = [];
+    unvisited.delete(start);
+
+    while (queue.length > 0) {
+      const key = queue.shift();
+      const node = byKey.get(key);
+      if (node !== undefined) {
+        component.push(node);
+      }
+      for (const next of links.get(key) ?? []) {
+        if (unvisited.delete(next)) {
+          queue.push(next);
+        }
+      }
+    }
+
+    components.push(component);
+  }
+
+  return components.sort((left, right) => right.length - left.length);
+}
+
+function trackSegmentInfo(trackSegments, type) {
+  const info = trackSegments[String(type)];
+  if (info === null || info === undefined) {
+    return null;
+  }
+  return {
+    endX: Number(info.endX ?? 0),
+    endY: Number(info.endY ?? 0),
+    beginZ: Number(info.beginZ ?? 0),
+    endZ: Number(info.endZ ?? 0),
+    beginDirection: Number(info.beginDirection ?? 0),
+    endDirection: Number(info.endDirection ?? 0)
+  };
+}
+
+function hasExplicitTrackOrigin(segment) {
+  return segment.x !== undefined || segment.y !== undefined || segment.z !== undefined || segment.direction !== undefined;
+}
+
+function advanceTrackCursor(cursor, trackInfo) {
+  const rotated = rotateDelta(trackInfo.endX, trackInfo.endY, cursor.direction);
+  const direction = normalizeDirection(cursor.direction + trackInfo.endDirection - trackInfo.beginDirection);
+  let x = cursor.x + Math.round(rotated.x / 32);
+  let y = cursor.y + Math.round(rotated.y / 32);
+  if ((trackInfo.endDirection & 4) !== 4) {
+    const delta = directionDelta(direction);
+    x += delta.x;
+    y += delta.y;
+  }
+
+  return {
+    x,
+    y,
+    z: cursor.z - trackInfo.beginZ + trackInfo.endZ,
+    direction
+  };
+}
+
+function rotateDelta(x, y, direction) {
+  switch (direction & 3) {
+    case 1:
+      return { x: y, y: -x };
+    case 2:
+      return { x: -x, y: -y };
+    case 3:
+      return { x: -y, y: x };
+    default:
+      return { x, y };
+  }
+}
+
+function sameTrackCursor(left, right) {
+  return left.x === right.x && left.y === right.y && left.z === right.z && left.direction === right.direction;
+}
+
+function trackKey(track) {
+  return `${track.x},${track.y},${track.z},d${normalizeDirection(track.direction)},t${track.trackType}`;
+}
+
+function formatTrackExpectation(track) {
+  return `(${track.x},${track.y},${track.z},d${normalizeDirection(track.direction)},t${track.trackType})`;
+}
+
+function formatCursor(cursor) {
+  return `(${cursor.x},${cursor.y},${cursor.z},d${cursor.direction})`;
+}
+
+function formatActualTrackNode(node) {
+  return `${formatCursor(node.start)},t${node.track.trackType}`;
 }
 
 function hasEntranceAndExit(ride) {
@@ -467,83 +922,6 @@ function oppositeDirection(direction) {
   return normalizeDirection(direction + 2);
 }
 
-function entranceExitPathTile(ride, isExit, plan) {
-  const location = entranceExitLocation(ride, isExit);
-  const delta = directionDelta(normalizeDirection(location.direction ?? ride.rotation ?? 0));
-  return clampPoint(
-    {
-      x: location.x - delta.x,
-      y: location.y - delta.y
-    },
-    plan.park.size.width,
-    plan.park.size.height
-  );
-}
-
-function entranceExitLocation(ride, isExit) {
-  const stationLocation = stationEntranceExitLocation(ride, isExit);
-  if (stationLocation !== null) {
-    return {
-      x: ride.position.x + stationLocation.x,
-      y: ride.position.y + stationLocation.y,
-      direction: stationLocation.direction
-    };
-  }
-
-  const fallback = fallbackEntranceExitOffset(ride, isExit);
-  return {
-    x: ride.position.x + fallback.x,
-    y: ride.position.y + fallback.y,
-    direction: fallback.direction
-  };
-}
-
-function stationEntranceExitLocation(ride, isExit) {
-  const stationSegments = (ride.track ?? []).filter(
-    (segment) => segment.type === END_STATION || segment.type === BEGIN_STATION || segment.type === MIDDLE_STATION
-  );
-  const stationIndex = isExit ? stationSegments.length - 1 : 0;
-  const station = stationSegments[stationIndex];
-  if (station === undefined) {
-    return null;
-  }
-
-  const stationOrigin = stationSegments[0];
-  const direction = normalizeDirection(station.direction ?? stationOrigin?.direction ?? ride.rotation ?? 0);
-  const stationStep = directionDelta(direction);
-  const side = stationSideOffset(direction, isExit);
-  const sideDirection = directionFromDelta(side.x, side.y);
-  return {
-    x: (station.x ?? (stationOrigin?.x ?? 0) + stationStep.x * stationIndex) + side.x,
-    y: (station.y ?? (stationOrigin?.y ?? 0) + stationStep.y * stationIndex) + side.y,
-    direction: normalizeDirection(sideDirection + 2)
-  };
-}
-
-function fallbackEntranceExitOffset(ride, isExit) {
-  const direction = normalizeDirection(ride.rotation ?? 0);
-  if (!isExit) {
-    return { x: 0, y: ride.footprint.h, direction };
-  }
-  if (ride.footprint.w <= 1) {
-    return { x: 1, y: ride.footprint.h, direction };
-  }
-  return { x: Math.max(ride.footprint.w - 1, 0), y: ride.footprint.h, direction };
-}
-
-function stationSideOffset(direction, isExit) {
-  if (direction === 0) {
-    return { x: 0, y: isExit ? -1 : 1 };
-  }
-  if (direction === 1) {
-    return { x: isExit ? 1 : -1, y: 0 };
-  }
-  if (direction === 2) {
-    return { x: 0, y: isExit ? 1 : -1 };
-  }
-  return { x: isExit ? -1 : 1, y: 0 };
-}
-
 function directionDelta(direction) {
   switch (direction & 3) {
     case 0:
@@ -557,22 +935,6 @@ function directionDelta(direction) {
     default:
       return { x: 0, y: 0 };
   }
-}
-
-function directionFromDelta(x, y) {
-  if (x < 0) {
-    return 0;
-  }
-  if (y > 0) {
-    return 1;
-  }
-  if (x > 0) {
-    return 2;
-  }
-  if (y < 0) {
-    return 3;
-  }
-  return 0;
 }
 
 function normalizeDirection(direction) {
