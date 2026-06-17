@@ -118,6 +118,7 @@ namespace RctaiBuilder {
   const SINGLE_TRAIN_COUNT = 1;
 
   export function createBuildSteps(plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
+    const resolvePathNetwork = createPathNetworkResolver(plan);
     const steps: RctaiBuilder.QueuedStep[] = [
       RctaiBuilder.createGameActionStep("enable sandbox mode", "cheatset", () => ({
         type: CHEAT_SANDBOX_MODE,
@@ -177,8 +178,9 @@ namespace RctaiBuilder {
     }
 
     for (const path of plan.paths ?? []) {
-      steps.push(...createPathSteps(path, plan));
+      steps.push(...createPathSteps(path, plan, resolvePathNetwork));
     }
+    steps.push(createRepairPathEdgesStep(plan, resolvePathNetwork));
 
     for (const scenery of plan.scenery ?? []) {
       steps.push(createSceneryStep(scenery, plan));
@@ -522,7 +524,11 @@ namespace RctaiBuilder {
     });
   }
 
-  function createPathSteps(path: RctaiBuilder.PathPlan, plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
+  function createPathSteps(
+    path: RctaiBuilder.PathPlan,
+    plan: RctaiBuilder.ParkPlan,
+    resolvePathNetwork: PathNetworkResolver
+  ): RctaiBuilder.QueuedStep[] {
     const coords = expandPath(path, plan);
     let cachedSpecs: PathTileBuildSpec[] | null = null;
     const resolveSpecs = (adapter: RctaiBuilder.BuilderAdapter, state: RctaiBuilder.JobState): PathTileBuildSpec[] => {
@@ -555,6 +561,25 @@ namespace RctaiBuilder {
         };
       }, undefined, { critical: true })
     );
+  }
+
+  function createRepairPathEdgesStep(
+    plan: RctaiBuilder.ParkPlan,
+    resolvePathNetwork: PathNetworkResolver
+  ): RctaiBuilder.QueuedStep {
+    return RctaiBuilder.createAdapterStep("repair path edge masks", (adapter, state, done) => {
+      const specs = [...resolvePathNetwork(adapter, state).values()].map((spec) => ({
+        x: spec.coord.x,
+        y: spec.coord.y,
+        z: spec.z,
+        edges: spec.edges,
+        slopeDirection: spec.slopeType === PATH_SLOPED ? spec.slopeDirection : null,
+        isQueue: spec.isQueue
+      }));
+      const repaired = adapter.repairFootpathEdges(specs);
+      adapter.log(`[rctai-builder] repaired ${repaired}/${specs.length} path edge masks`);
+      done({});
+    }, { critical: true });
   }
 
   function createHeightResolutionSteps(plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
@@ -636,6 +661,16 @@ namespace RctaiBuilder {
     slopeDirection: number;
   }
 
+  interface PathNetworkBuildSpec extends PathTileBuildSpec {
+    edges: number;
+    isQueue: boolean;
+  }
+
+  type PathNetworkResolver = (
+    adapter: RctaiBuilder.BuilderAdapter,
+    state: RctaiBuilder.JobState
+  ) => Map<string, PathNetworkBuildSpec>;
+
   function resolveEntranceBuildZ(adapter: RctaiBuilder.BuilderAdapter, plan: RctaiBuilder.ParkPlan): number {
     const terrainZ = surfaceBuildZ(adapter, plan.park.entrance);
     return clampBuildZ(Math.max(plan.park.entrance.z ?? RctaiBuilder.DEFAULT_Z, terrainZ ?? RctaiBuilder.DEFAULT_Z));
@@ -696,6 +731,71 @@ namespace RctaiBuilder {
       z: profile[index] ?? planBuildZ(plan),
       ...pathSlopeForTile(coords, profile, index)
     }));
+  }
+
+  function createPathNetworkResolver(plan: RctaiBuilder.ParkPlan): PathNetworkResolver {
+    let cached: Map<string, PathNetworkBuildSpec> | null = null;
+    return (adapter, state) => {
+      if (cached === null) {
+        cached = createPathNetworkSpecs(plan, adapter, state);
+      }
+      return cached;
+    };
+  }
+
+  function createPathNetworkSpecs(
+    plan: RctaiBuilder.ParkPlan,
+    adapter: RctaiBuilder.BuilderAdapter,
+    state: RctaiBuilder.JobState
+  ): Map<string, PathNetworkBuildSpec> {
+    const byKey = new Map<string, PathNetworkBuildSpec>();
+    for (const path of plan.paths ?? []) {
+      const coords = expandPath(path, plan);
+      const specs = createPathTileSpecs(path, coords, plan, adapter, state);
+      for (const spec of specs) {
+        const key = pathTileBuildSpecKey(spec);
+        if (!byKey.has(key)) {
+          byKey.set(key, { ...spec, edges: 0, isQueue: false });
+        }
+      }
+    }
+
+    const byXY = new Map<string, PathNetworkBuildSpec[]>();
+    for (const spec of byKey.values()) {
+      const key = pathCoordKey(spec.coord);
+      const candidates = byXY.get(key) ?? [];
+      candidates.push(spec);
+      byXY.set(key, candidates);
+    }
+
+    for (const spec of byKey.values()) {
+      let edges = 0;
+      for (let direction = 0; direction < 4; direction += 1) {
+        const delta = directionTileDelta(direction);
+        const candidates = byXY.get(pathCoordKey({ x: spec.coord.x + delta.x, y: spec.coord.y + delta.y })) ?? [];
+        if (candidates.some((candidate) => pathSpecsConnect(spec, candidate, direction))) {
+          edges |= 1 << direction;
+        }
+      }
+      spec.edges = edges;
+    }
+
+    return byKey;
+  }
+
+  function pathSpecsConnect(from: PathTileBuildSpec, to: PathTileBuildSpec, direction: number): boolean {
+    return pathSpecEdgeZ(from, direction) === pathSpecEdgeZ(to, normalizeDirection(direction + 2));
+  }
+
+  function pathCoordKey(coord: RctaiBuilder.Coord): string {
+    return `${coord.x},${coord.y}`;
+  }
+
+  function pathSpecEdgeZ(spec: PathTileBuildSpec, direction: number): number {
+    if (spec.slopeType !== PATH_SLOPED) {
+      return spec.z;
+    }
+    return normalizeDirection(spec.slopeDirection) === normalizeDirection(direction) ? spec.z + PATH_HEIGHT_STEP : spec.z;
   }
 
   function pathZProfile(

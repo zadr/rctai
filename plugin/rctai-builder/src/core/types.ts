@@ -143,6 +143,15 @@ namespace RctaiBuilder {
     railingsObject: number;
   }
 
+  export interface FootpathRepairSpec {
+    x: number;
+    y: number;
+    z: number;
+    edges: number;
+    slopeDirection: number | null;
+    isQueue?: boolean;
+  }
+
   export interface TrackCursor {
     x: number;
     y: number;
@@ -207,9 +216,12 @@ namespace RctaiBuilder {
     x: number;
     y: number;
     z: number;
+    edges?: number;
+    corners?: number;
     direction?: number;
     slopeDirection?: number | null;
     isQueue?: boolean;
+    queueBannerDirection?: number | null;
     ride?: number | null;
     station?: number | null;
   }
@@ -264,6 +276,7 @@ namespace RctaiBuilder {
     getTrackSegment(type: number): TrackSegmentInfo | null;
     inspectTrackSegments(types: number[]): Record<string, TrackSegmentInfo | null>;
     getSurfaceZ(x: number, y: number): number | null;
+    repairFootpathEdges(specs: FootpathRepairSpec[]): number;
     placeRawTrack(args: RawTrackArgs): void;
     clearPathsAndScenery(callback: (result: GameActionResultLike) => void): void;
     getExistingRideIds(): number[];

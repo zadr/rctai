@@ -88,6 +88,10 @@ namespace RctaiBuilder {
       return null;
     }
 
+    repairFootpathEdges(specs: RctaiBuilder.FootpathRepairSpec[]): number {
+      return specs.length;
+    }
+
     placeRawTrack(args: RctaiBuilder.RawTrackArgs): void {
       this.actions.push({ action: "rawtrack", args: args as unknown as Record<string, unknown> });
     }

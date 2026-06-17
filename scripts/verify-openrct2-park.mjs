@@ -1055,7 +1055,17 @@ function pathTilesByXY(footpaths) {
 function pathTilesConnect(from, to, direction) {
   const fromEdgeZ = pathEdgeZ(from, direction);
   const toEdgeZ = pathEdgeZ(to, oppositeDirection(direction));
-  return fromEdgeZ !== null && toEdgeZ !== null && fromEdgeZ === toEdgeZ;
+  return (
+    fromEdgeZ !== null &&
+    toEdgeZ !== null &&
+    fromEdgeZ === toEdgeZ &&
+    pathEdgeAllows(from, direction) &&
+    pathEdgeAllows(to, oppositeDirection(direction))
+  );
+}
+
+function pathEdgeAllows(path, direction) {
+  return typeof path.edges !== "number" || (path.edges & (1 << normalizeDirection(direction))) !== 0;
 }
 
 function pathEdgeZ(path, direction) {

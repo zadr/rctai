@@ -129,6 +129,31 @@ namespace RctaiBuilder {
       return null;
     }
 
+    repairFootpathEdges(specs: RctaiBuilder.FootpathRepairSpec[]): number {
+      let repaired = 0;
+      for (const spec of specs) {
+        const tile = map.getTile(spec.x, spec.y);
+        for (const element of tile.elements) {
+          if (element.type !== "footpath" || element.baseZ !== spec.z) {
+            continue;
+          }
+          const slopeDirection = element.slopeDirection ?? null;
+          if (slopeDirection !== spec.slopeDirection) {
+            continue;
+          }
+          element.edges = spec.edges;
+          element.corners = 0;
+          element.isQueue = spec.isQueue === true;
+          if (element.isQueue !== true) {
+            element.queueBannerDirection = null;
+          }
+          repaired += 1;
+          break;
+        }
+      }
+      return repaired;
+    }
+
     placeRawTrack(args: RctaiBuilder.RawTrackArgs): void {
       const tile = map.getTile(args.x, args.y);
       const element = tile.insertElement(tile.elements.length) as TrackElement;
@@ -429,7 +454,13 @@ namespace RctaiBuilder {
               x,
               y,
               z: element.baseZ,
-              slopeDirection: element.slopeDirection
+              edges: element.edges,
+              corners: element.corners,
+              slopeDirection: element.slopeDirection,
+              isQueue: element.isQueue,
+              queueBannerDirection: element.queueBannerDirection,
+              ride: element.ride,
+              station: element.station
             });
           }
         }
