@@ -157,6 +157,7 @@ namespace RctaiBuilder {
     endY: number;
     beginDirection: number;
     endDirection: number;
+    elements?: Array<{ x: number; y: number; z: number }>;
   }
 
   export interface RuntimeCrashEvent {

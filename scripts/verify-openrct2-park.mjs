@@ -496,6 +496,7 @@ function validatePlacedTrackGraph(ride, actual, tracksByRide, surfacesByXY, trac
   }
 
   issues.push(...validateActualTrackTerrainClearance(ride, allActualTracks, surfacesByXY, phase));
+  issues.push(...validateActualTrackElements(ride, allActualTracks, actualTracks, trackSegments, phase));
 
   const firstSegment = ride.track[0];
   if (firstSegment === undefined) {
@@ -609,6 +610,63 @@ function validatePlacedTrackGraph(ride, actual, tracksByRide, surfacesByXY, trac
   if (startCursor !== null && endCursor !== null && !sameTrackCursor(startCursor, endCursor)) {
     issues.push(
       `${phase}: ride ${ride.id} planned track cursor is not closed: start ${formatCursor(startCursor)}, end ${formatCursor(endCursor)}`
+    );
+  }
+
+  return issues;
+}
+
+function validateActualTrackElements(ride, allActualTracks, sequenceStartTracks, trackSegments, phase) {
+  const actualCounts = countedTrackKeys(allActualTracks.map((track) => physicalTrackKey(track)));
+  const expectedCounts = new Map();
+  const missing = [];
+
+  for (const start of sequenceStartTracks) {
+    const meta = trackSegmentInfo(trackSegments, start.trackType);
+    if (meta === null) {
+      continue;
+    }
+    const elements = meta.elements.length > 0 ? meta.elements : [{ x: 0, y: 0, z: 0 }];
+    for (let sequence = 0; sequence < elements.length; sequence += 1) {
+      const expected = physicalTrackElementFor(start, elements[sequence], sequence);
+      const key = physicalTrackKey(expected);
+      expectedCounts.set(key, (expectedCounts.get(key) ?? 0) + 1);
+      const available = actualCounts.get(key) ?? 0;
+      if (available <= 0) {
+        missing.push({ parent: start, expected });
+      } else {
+        actualCounts.set(key, available - 1);
+      }
+    }
+  }
+
+  const issues = [];
+  if (missing.length > 0) {
+    const examples = missing
+      .slice(0, 5)
+      .map((entry) => `${formatPhysicalTrack(entry.expected)} from ${formatPhysicalTrack(entry.parent)}`)
+      .join("; ");
+    issues.push(
+      `${phase}: ride ${ride.id} is missing ${missing.length} physical track sub-element(s); first missing: ${examples}`
+    );
+  }
+
+  const unexpected = [];
+  for (const [key, count] of actualCounts.entries()) {
+    if (count > 0 && !expectedCounts.has(key)) {
+      unexpected.push({ key, count });
+    }
+  }
+  if (unexpected.length > 0) {
+    const examples = unexpected
+      .slice(0, 5)
+      .map((entry) => `${entry.key}${entry.count > 1 ? ` x${entry.count}` : ""}`)
+      .join("; ");
+    issues.push(
+      `${phase}: ride ${ride.id} has ${unexpected.reduce(
+        (sum, entry) => sum + entry.count,
+        0
+      )} unexpected physical track sub-element(s); first extra: ${examples}`
     );
   }
 
@@ -821,7 +879,14 @@ function trackSegmentInfo(trackSegments, type) {
     beginZ: Number(info.beginZ ?? 0),
     endZ: Number(info.endZ ?? 0),
     beginDirection: Number(info.beginDirection ?? 0),
-    endDirection: Number(info.endDirection ?? 0)
+    endDirection: Number(info.endDirection ?? 0),
+    elements: Array.isArray(info.elements)
+      ? info.elements.map((element) => ({
+          x: Number(element.x ?? 0),
+          y: Number(element.y ?? 0),
+          z: Number(element.z ?? 0)
+        }))
+      : [{ x: 0, y: 0, z: 0 }]
   };
 }
 
@@ -869,8 +934,30 @@ function trackKey(track) {
   return `${track.x},${track.y},${track.z},d${normalizeDirection(track.direction)},t${track.trackType}`;
 }
 
+function physicalTrackElementFor(start, localElement, sequence) {
+  const rotated = rotateDelta(localElement.x, localElement.y, normalizeDirection(start.direction));
+  return {
+    x: start.x + Math.round(rotated.x / 32),
+    y: start.y + Math.round(rotated.y / 32),
+    z: start.z + localElement.z,
+    direction: normalizeDirection(start.direction),
+    trackType: start.trackType,
+    sequence
+  };
+}
+
+function physicalTrackKey(track) {
+  const sequence = track.sequence === null || track.sequence === undefined ? "null" : track.sequence;
+  return `${track.x},${track.y},${track.z},d${normalizeDirection(track.direction)},t${track.trackType},s${sequence}`;
+}
+
 function formatTrackExpectation(track) {
   return `(${track.x},${track.y},${track.z},d${normalizeDirection(track.direction)},t${track.trackType})`;
+}
+
+function formatPhysicalTrack(track) {
+  const sequence = track.sequence === null || track.sequence === undefined ? "null" : track.sequence;
+  return `(${track.x},${track.y},${track.z},d${normalizeDirection(track.direction)},t${track.trackType},s${sequence})`;
 }
 
 function formatCursor(cursor) {

@@ -102,7 +102,8 @@ namespace RctaiBuilder {
             endX: segment.endX,
             endY: segment.endY,
             beginDirection: segment.beginDirection,
-            endDirection: segment.endDirection
+            endDirection: segment.endDirection,
+            elements: segment.elements.map((element) => ({ x: element.x, y: element.y, z: element.z }))
           };
     }
 
