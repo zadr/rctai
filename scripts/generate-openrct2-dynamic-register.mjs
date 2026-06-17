@@ -33,6 +33,8 @@ const RIGHT_LOOP = 41;
 const BRAKES = 99;
 const BOOSTER = 100;
 const BLOCK_BRAKES = 216;
+const BRAKE_TRACK_TYPES = new Set([BRAKES, BLOCK_BRAKES]);
+const RIDE_TYPES_WITHOUT_PAINTED_BRAKES = new Set(["miniature_railway", "suspended_monorail"]);
 
 const RIDE_OBJECT_OVERRIDES = {
   alpine_rc: "openrct2.ride.alpine_coaster",
@@ -418,6 +420,7 @@ function prepareDynamicTrackRide(ride, axes, index, relation) {
 
   const track = buildDynamicTrack({
     ride,
+    visualRideType,
     axes,
     seed,
     sideA,
@@ -442,7 +445,7 @@ function prepareDynamicTrackRide(ride, axes, index, relation) {
   };
 }
 
-function buildDynamicTrack({ ride, axes, seed, sideA, sideB, stationLength, turnType, hillHeight, allowLoop, relation, variant }) {
+function buildDynamicTrack({ ride, visualRideType, axes, seed, sideA, sideB, stationLength, turnType, hillHeight, allowLoop, relation, variant }) {
   const station = buildStation(stationLength);
   const shortSide = Math.max(8, Math.round(sideB * 0.82));
   const frontSide = Math.max(10, sideA - stationLength + (variant % 3));
@@ -486,6 +489,7 @@ function buildDynamicTrack({ ride, axes, seed, sideA, sideB, stationLength, turn
     { type: turnType },
     ...buildConnectedSide(shortSide, "final", {
       ride,
+      visualRideType,
       axes,
       seed: sideSeed + 37,
       hillHeight,
@@ -587,7 +591,7 @@ function isStraightPreserving(track) {
   return forwardAdvance(track) > 0;
 }
 
-function connectedSideCandidates(role, { ride, axes, seed, hillHeight, allowLoop, relation }) {
+function connectedSideCandidates(role, { ride, visualRideType, axes, seed, hillHeight, allowLoop, relation }) {
   const candidates = [];
   if (role === "front") {
     candidates.push(buildLiftDrop(axes, hillHeight, 10 + hillHeight * 2));
@@ -606,7 +610,7 @@ function connectedSideCandidates(role, { ride, axes, seed, hillHeight, allowLoop
   }
 
   if (role === "final") {
-    candidates.push(buildFinalSide(6, axes, seed + 37));
+    candidates.push(buildFinalSide(6, visualRideType, axes, seed + 37));
   }
 
   return candidates.filter((candidate) => isStraightPreserving(candidate));
@@ -654,12 +658,16 @@ function buildWiggle(clockwise, depth) {
   ];
 }
 
-function buildFinalSide(length, axes, seed) {
+function buildFinalSide(length, visualRideType, axes, seed) {
   const pieces = [];
   let remaining = Math.max(0, length);
   const brakeRun = Math.min(4, Math.max(2, Math.floor(remaining / 3)));
   pieces.push(...repeat(FLAT, Math.max(0, remaining - brakeRun)));
   remaining = brakeRun;
+  if (!hasPaintedBrakes(visualRideType)) {
+    pieces.push(...repeat(FLAT, remaining));
+    return pieces;
+  }
   if (remaining > 0 && axes.risk > 0.45) {
     pieces.push({ type: BLOCK_BRAKES, brakeSpeed: 12 });
     remaining -= 1;
@@ -1139,12 +1147,25 @@ function validateGeneratedPlan(generated) {
   const issues = [
     ...validatePathGraph(generated),
     ...validatePhysicalPathNetwork(generated),
+    ...validatePaintedTrackPieces(generated.rides),
     ...validateClosedTrackCircuits(generated.rides)
   ];
 
   if (issues.length > 0) {
     throw new Error(`Generated register park failed connectivity validation:\n${issues.map((issue) => `- ${issue}`).join("\n")}`);
   }
+}
+
+function validatePaintedTrackPieces(rides) {
+  const issues = [];
+  for (const ride of rides ?? []) {
+    for (const [index, segment] of (ride.track ?? []).entries()) {
+      if (isUnpaintedTrackPiece(ride.rideType, segment.type)) {
+        issues.push(`${ride.id} ${ride.rideType} segment ${index} uses unpainted track type ${segment.type}`);
+      }
+    }
+  }
+  return issues;
 }
 
 function validatePathGraph(generated) {
@@ -1324,6 +1345,14 @@ function shouldRenderAsFlatRide(ride) {
 
 function isTowerRide(ride) {
   return ride.rideType === "observation_tower" || ride.rideType === "roto_drop" || ride.rideType === "launched_freefall";
+}
+
+function hasPaintedBrakes(rideType) {
+  return !RIDE_TYPES_WITHOUT_PAINTED_BRAKES.has(rideType);
+}
+
+function isUnpaintedTrackPiece(rideType, trackType) {
+  return RIDE_TYPES_WITHOUT_PAINTED_BRAKES.has(rideType) && BRAKE_TRACK_TYPES.has(trackType);
 }
 
 function buildRelationshipIndex(workModel) {

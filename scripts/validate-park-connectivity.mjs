@@ -15,6 +15,10 @@ const BEGIN_STATION = 2;
 const END_STATION = 1;
 const MIDDLE_STATION = 3;
 const FLAT = 0;
+const BRAKES = 99;
+const BLOCK_BRAKES = 216;
+const BRAKE_TRACK_TYPES = new Set([BRAKES, BLOCK_BRAKES]);
+const RIDE_TYPES_WITHOUT_PAINTED_BRAKES = new Set(["miniature_railway", "suspended_monorail"]);
 
 const TRACK_META = {
   0: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
@@ -48,6 +52,7 @@ const issues = [
   ...validateSchema(schema, plan),
   ...validatePathGraph(plan),
   ...validatePhysicalPathNetwork(plan),
+  ...validatePaintedTrackPieces(plan.rides ?? []),
   ...validateClosedTrackCircuits(plan.rides ?? [])
 ];
 
@@ -160,6 +165,18 @@ function validatePhysicalPathNetwork(plan) {
     }
   }
 
+  return issues;
+}
+
+function validatePaintedTrackPieces(rides) {
+  const issues = [];
+  for (const ride of rides) {
+    for (const [index, segment] of (ride.track ?? []).entries()) {
+      if (isUnpaintedTrackPiece(ride.rideType, segment.type)) {
+        issues.push(`${ride.id} ${ride.rideType} segment ${index} uses unpainted track type ${segment.type}`);
+      }
+    }
+  }
   return issues;
 }
 
@@ -321,6 +338,10 @@ function requiresClosedTrackCircuit(ride) {
 
 function isTowerRide(ride) {
   return ride.rideType === "observation_tower" || ride.rideType === "roto_drop" || ride.rideType === "launched_freefall";
+}
+
+function isUnpaintedTrackPiece(rideType, trackType) {
+  return RIDE_TYPES_WITHOUT_PAINTED_BRAKES.has(rideType) && BRAKE_TRACK_TYPES.has(trackType);
 }
 
 function trackStartCursor(ride) {
