@@ -19,6 +19,7 @@ const BRAKES = 99;
 const BLOCK_BRAKES = 216;
 const BRAKE_TRACK_TYPES = new Set([BRAKES, BLOCK_BRAKES]);
 const RIDE_TYPES_WITHOUT_PAINTED_BRAKES = new Set(["miniature_railway", "suspended_monorail"]);
+const SHOP_FACILITY_RIDE_TYPES = new Set(["drink_stall", "food_stall", "information_kiosk", "toilets"]);
 const SIMPLE_SOLID_RIDE_TYPES = new Set([
   "dodgems",
   "drink_stall",
@@ -347,6 +348,10 @@ function isSimpleSolidRide(ride) {
   return SIMPLE_SOLID_RIDE_TYPES.has(ride.rideType);
 }
 
+function isShopFacilityRide(ride) {
+  return SHOP_FACILITY_RIDE_TYPES.has(ride.rideType);
+}
+
 function reachablePathTiles(pathTiles, entrance) {
   const visited = new Set();
   const queue = [entrance];
@@ -431,6 +436,9 @@ function stationEntranceExitLocation(ride, isExit) {
 }
 
 function fallbackEntranceExitOffset(ride, isExit) {
+  if (isShopFacilityRide(ride)) {
+    return shopFacilityAccessOffset(fallbackRideBodyBounds(ride), normalizeDirection(ride.rotation ?? 1), isExit);
+  }
   return sideAccessOffset(fallbackRideBodyBounds(ride), normalizeDirection(ride.rotation ?? 1), isExit);
 }
 
@@ -504,6 +512,23 @@ function sideAccessOffset(bounds, side, isExit) {
     return { x: bounds.x + bounds.w, y: bounds.y + along, direction: 0 };
   }
   return { x: bounds.x + along, y: bounds.y - 1, direction: 1 };
+}
+
+function shopFacilityAccessOffset(bounds, side, isExit) {
+  return bodyEdgeAccessOffset(bounds, normalizeDirection(side + (isExit ? 1 : 0)));
+}
+
+function bodyEdgeAccessOffset(bounds, side) {
+  if (side === 0) {
+    return { x: bounds.x, y: bounds.y, direction: 2 };
+  }
+  if (side === 1) {
+    return { x: bounds.x, y: bounds.y + bounds.h - 1, direction: 3 };
+  }
+  if (side === 2) {
+    return { x: bounds.x + bounds.w - 1, y: bounds.y, direction: 0 };
+  }
+  return { x: bounds.x, y: bounds.y, direction: 1 };
 }
 
 function perpendicularExitAccessOffset(bounds, side) {

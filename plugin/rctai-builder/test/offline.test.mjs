@@ -191,7 +191,7 @@ test("offline build emits sloped paths between different anchor heights", () => 
   assert.equal(sloped.length, 2);
   assert.deepEqual(
     pathPlaces.map((action) => action.args.z),
-    [16, 16, 16, 16, 16, 32, 48]
+    [16, 16, 16, 16, 32, 48, 48]
   );
 });
 

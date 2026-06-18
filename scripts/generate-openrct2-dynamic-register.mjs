@@ -10,6 +10,7 @@ const workModelPath = process.argv[4] ?? "build/register-transcripts/register-tr
 const BASE_Z = 176;
 const PARK_WIDTH = 360;
 const PARK_HEIGHT = 320;
+const MIN_BRANCH_LANE_ENTRANCE_DISTANCE = 12;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 const FLAT = 0;
@@ -136,6 +137,7 @@ const SHOP_VISUALS = [
   { rideType: "toilets", footprint: { w: 1, h: 1 }, trackType: 262 },
   { rideType: "information_kiosk", footprint: { w: 1, h: 1 }, trackType: 264 }
 ];
+const SHOP_FACILITY_RIDE_TYPES = new Set(SHOP_VISUALS.map((visual) => visual.rideType));
 
 const SIMPLE_SOLID_RIDE_TYPES = new Set([
   ...GENTLE_FLAT_VISUALS.map((visual) => visual.rideType),
@@ -1375,11 +1377,7 @@ function trackTileKeysForRideAt(ride, position) {
 
 function rideAccessTileKeysAt(ride, position) {
   const placedRide = { ...ride, position };
-  return unique([
-    coordKey(ridePathEndpoint(placedRide)),
-    coordKey(entranceExitPathTile(placedRide, false)),
-    coordKey(entranceExitPathTile(placedRide, true))
-  ]);
+  return unique(rideAccessPathTiles(placedRide).map(coordKey));
 }
 
 function simpleRideSolidTileSet(rides) {
@@ -1416,6 +1414,10 @@ function accessBuildingTileKeys(ride) {
 
 function isSimpleSolidRide(ride) {
   return SIMPLE_SOLID_RIDE_TYPES.has(ride.rideType);
+}
+
+function isShopFacilityRide(ride) {
+  return SHOP_FACILITY_RIDE_TYPES.has(ride.rideType);
 }
 
 function clusterRides(rides) {
@@ -1478,48 +1480,181 @@ function clampPosition(position, footprint) {
 function buildRidePaths(rides) {
   const paths = [];
   const blockedTiles = simpleRideSolidTileSet(rides);
-  const connected = [{ id: "entrance", point: parkEntrancePoint() }];
-  const remaining = [...rides];
+  const entrance = { id: "entrance", point: parkEntrancePoint() };
 
-  while (remaining.length > 0) {
-    const { rideIndex: nextIndex, source } = nearestRideConnection(remaining, connected);
-    const [ride] = remaining.splice(nextIndex, 1);
-    if (ride === undefined) {
-      continue;
-    }
+  const reservedBranchLanes = new Set();
+  const reservedPathTiles = new Set();
+  for (const [index, ride] of rides.entries()) {
+    const accessTiles = rideAccessPathTiles(ride);
+    const route = ridePathRoute(
+      ride,
+      accessTiles,
+      entrance,
+      blockedTiles,
+      index,
+      reservedBranchLanes,
+      reservedPathTiles
+    );
+    paths.push(route.mainPath);
+    reservePathTiles(route.mainPath.waypoints, reservedPathTiles);
 
-    const endpoint = ridePathEndpoint(ride);
-    paths.push(pathEdge(source.id, ride.id, source.point, endpoint, blockedTiles));
-    connected.push({ id: ride.id, point: endpoint });
-
-    for (const accessTile of rideRequiredPathTiles(ride)) {
-      if (coordKey(endpoint) !== coordKey(accessTile)) {
-        paths.push(pathEdge(ride.id, ride.id, endpoint, accessTile, blockedTiles));
-      }
+    for (const accessPath of route.accessPaths) {
+      paths.push(accessPath);
+      reservePathTiles(accessPath.waypoints, reservedPathTiles);
     }
   }
 
   return paths;
 }
 
-function nearestRideConnection(rides, connected) {
-  let best = { rideIndex: 0, source: connected[0] ?? { id: "entrance", point: parkEntrancePoint() } };
-  let bestDistance = Number.POSITIVE_INFINITY;
-  for (let rideIndex = 0; rideIndex < rides.length; rideIndex += 1) {
-    const ride = rides[rideIndex];
-    if (ride === undefined) {
-      continue;
-    }
-    const endpoint = ridePathEndpoint(ride);
-    for (const source of connected) {
-      const distance = manhattan(source.point, endpoint);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = { rideIndex, source };
+function ridePathRoute(ride, accessTiles, entrance, blockedTiles, index, reservedBranchLanes, reservedPathTiles) {
+  for (const endpoint of ridePathEndpointCandidates(ride, blockedTiles)) {
+    const tentativeBranchLanes = new Set(reservedBranchLanes);
+    const mainPath = mainPathEdge(
+      entrance.id,
+      ride.id,
+      entrance.point,
+      endpoint,
+      blockedTiles,
+      index,
+      tentativeBranchLanes,
+      reservedPathTiles
+    );
+    const accessPaths = rideAccessPaths(ride.id, endpoint, accessTiles, blockedTiles);
+    if (!accessPathsOverlapMainRoute(endpoint, accessPaths, mainPath)) {
+      reservedBranchLanes.clear();
+      for (const branchLane of tentativeBranchLanes) {
+        reservedBranchLanes.add(branchLane);
       }
+      return { mainPath, accessPaths };
     }
   }
-  return best;
+
+  const endpoint = ridePathEndpoint(ride, blockedTiles);
+  return {
+    mainPath: mainPathEdge(entrance.id, ride.id, entrance.point, endpoint, blockedTiles, index, reservedBranchLanes, reservedPathTiles),
+    accessPaths: rideAccessPaths(ride.id, endpoint, accessTiles, blockedTiles)
+  };
+}
+
+function rideAccessPaths(rideId, endpoint, accessTiles, blockedTiles) {
+  const paths = [];
+  for (const accessTile of accessTiles) {
+    if (coordKey(endpoint) !== coordKey(accessTile)) {
+      paths.push(pathEdge(rideId, rideId, endpoint, accessTile, blockedTiles));
+    }
+  }
+  return paths;
+}
+
+function accessPathsOverlapMainRoute(endpoint, accessPaths, mainPath) {
+  const endpointKey = coordKey(endpoint);
+  const mainKeys = new Set((mainPath.waypoints ?? []).map(coordKey).filter((key) => key !== endpointKey));
+  return accessPaths.some((accessPath) =>
+    (accessPath.waypoints ?? []).some((waypoint) => {
+      const key = coordKey(waypoint);
+      return key !== endpointKey && mainKeys.has(key);
+    })
+  );
+}
+
+function mainPathEdge(from, to, start, end, blockedTiles, index, reservedBranchLanes, reservedPathTiles) {
+  for (const branchX of branchLaneCandidates(end.x, index)) {
+    if (reservedBranchLanes.has(branchX)) {
+      continue;
+    }
+    const waypoints = branchPathBetween(start, end, branchX, blockedTiles, reservedPathTiles);
+    if (waypoints !== null) {
+      reservedBranchLanes.add(branchX);
+      return { from, to, waypoints };
+    }
+  }
+  return pathEdge(from, to, start, end, blockedTiles);
+}
+
+function reservePathTiles(waypoints, reservedPathTiles) {
+  for (const waypoint of waypoints ?? []) {
+    if (waypoint.y !== parkEntrancePoint().y) {
+      reservedPathTiles.add(coordKey(waypoint));
+    }
+  }
+}
+
+function branchLaneCandidates(targetX, index) {
+  const candidates = [];
+  const seen = new Set();
+  const add = (x) => {
+    const clamped = Math.max(4, Math.min(PARK_WIDTH - 5, Math.round(x)));
+    if (Math.abs(clamped - parkEntrancePoint().x) <= MIN_BRANCH_LANE_ENTRANCE_DISTANCE) {
+      return;
+    }
+    if (!seen.has(clamped)) {
+      seen.add(clamped);
+      candidates.push(clamped);
+    }
+  };
+
+  add(8 + ((index * 37) % (PARK_WIDTH - 16)));
+  add(targetX);
+  for (let offset = 1; offset < PARK_WIDTH; offset += 1) {
+    add(targetX + offset);
+    add(targetX - offset);
+  }
+  return candidates;
+}
+
+function branchPathBetween(start, end, branchX, blockedTiles, reservedPathTiles) {
+  const corners = [
+    start,
+    { x: branchX, y: start.y },
+    { x: branchX, y: end.y },
+    end
+  ];
+  const path = [];
+  for (let index = 0; index < corners.length - 1; index += 1) {
+    const segment = straightPathSegment(corners[index], corners[index + 1]);
+    if (segment === null) {
+      return null;
+    }
+    for (const coord of segment) {
+      if (
+        !isInsideParkTile(coord) ||
+        isBlockedPathTile(coord, blockedTiles, start, end) ||
+        isReservedPathTile(coord, reservedPathTiles, start, end)
+      ) {
+        return null;
+      }
+      path.push(coord);
+    }
+  }
+  return dedupeCoords(path);
+}
+
+function isReservedPathTile(coord, reservedPathTiles, start, end) {
+  return coord.y !== parkEntrancePoint().y &&
+    coordKey(coord) !== coordKey(start) &&
+    coordKey(coord) !== coordKey(end) &&
+    reservedPathTiles.has(coordKey(coord));
+}
+
+function straightPathSegment(start, end) {
+  if (start.x !== end.x && start.y !== end.y) {
+    return null;
+  }
+  const path = [];
+  if (start.x !== end.x) {
+    const step = Math.sign(end.x - start.x);
+    for (let x = start.x; x !== end.x; x += step) {
+      path.push({ x, y: start.y });
+    }
+  } else if (start.y !== end.y) {
+    const step = Math.sign(end.y - start.y);
+    for (let y = start.y; y !== end.y; y += step) {
+      path.push({ x: start.x, y });
+    }
+  }
+  path.push(end);
+  return path;
 }
 
 function pathEdge(from, to, start, end, blockedTiles) {
@@ -1534,8 +1669,8 @@ function pathEdge(from, to, start, end, blockedTiles) {
   }
 }
 
-function rideRequiredPathTiles(ride) {
-  return uniqueCoords([ridePathEndpoint(ride), entranceExitPathTile(ride, false), entranceExitPathTile(ride, true)]);
+function rideAccessPathTiles(ride) {
+  return uniqueCoords([entranceExitPathTile(ride, false), entranceExitPathTile(ride, true)]);
 }
 
 function uniqueCoords(coords) {
@@ -1615,15 +1750,76 @@ function parkEntrancePoint() {
   return { x: Math.floor(PARK_WIDTH / 2), y: 4 };
 }
 
-function ridePathEndpoint(ride) {
-  if (hasStationSegments(ride)) {
-    return entranceExitPathTile(ride, false);
+function ridePathEndpoint(ride, blockedTiles) {
+  const accessTiles = rideAccessPathTiles(ride);
+  if (blockedTiles === undefined) {
+    return accessTiles[0] ?? entranceExitPathTile(ride, false);
   }
-  return entranceExitPathTile(ride, false);
+  return ridePathEndpointCandidates(ride, blockedTiles)[0] ?? accessTiles[0] ?? entranceExitPathTile(ride, false);
 }
 
-function hasStationSegments(ride) {
-  return (ride.track ?? []).some((segment) => segment.type === END_STATION || segment.type === BEGIN_STATION || segment.type === MIDDLE_STATION);
+function ridePathEndpointCandidates(ride, blockedTiles) {
+  const accessTiles = rideAccessPathTiles(ride);
+  return uniqueCoords([...ridePathHubCandidates(accessTiles, blockedTiles), ...accessTiles]);
+}
+
+function ridePathHubCandidates(accessTiles, blockedTiles) {
+  if (accessTiles.length <= 1) {
+    return accessTiles;
+  }
+
+  const minX = Math.min(...accessTiles.map((tile) => tile.x));
+  const maxX = Math.max(...accessTiles.map((tile) => tile.x));
+  const minY = Math.min(...accessTiles.map((tile) => tile.y));
+  const maxY = Math.max(...accessTiles.map((tile) => tile.y));
+  const accessKeys = new Set(accessTiles.map(coordKey));
+  const candidates = [];
+  const seen = new Set();
+  for (let radius = 1; radius <= 4; radius += 1) {
+    for (let y = minY - radius; y <= maxY + radius; y += 1) {
+      for (let x = minX - radius; x <= maxX + radius; x += 1) {
+        if (x !== minX - radius && x !== maxX + radius && y !== minY - radius && y !== maxY + radius) {
+          continue;
+        }
+        const candidate = clampPoint({ x, y });
+        const key = coordKey(candidate);
+        if (seen.has(key) || accessKeys.has(key) || blockedTiles.has(key) || !isInsideParkTile(candidate)) {
+          continue;
+        }
+        seen.add(key);
+        candidates.push(candidate);
+      }
+    }
+  }
+
+  const entrance = parkEntrancePoint();
+  candidates.sort((left, right) => {
+    const leftCost = hubCandidateCost(left, accessTiles, entrance);
+    const rightCost = hubCandidateCost(right, accessTiles, entrance);
+    if (leftCost !== rightCost) {
+      return leftCost - rightCost;
+    }
+    if (left.y !== right.y) {
+      return left.y - right.y;
+    }
+    return left.x - right.x;
+  });
+
+  return candidates.filter((candidate) => accessTiles.every((accessTile) => canConnectPath(candidate, accessTile, blockedTiles)));
+}
+
+function hubCandidateCost(candidate, accessTiles, entrance) {
+  const accessCost = accessTiles.reduce((total, accessTile) => total + manhattan(candidate, accessTile), 0);
+  return accessCost * 1000 + manhattan(candidate, entrance);
+}
+
+function canConnectPath(start, end, blockedTiles) {
+  try {
+    shortestPathBetween(start, end, blockedTiles);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function entranceExitPathTile(ride, isExit) {
@@ -1674,6 +1870,9 @@ function stationEntranceExitLocation(ride, isExit) {
 }
 
 function fallbackEntranceExitOffset(ride, isExit) {
+  if (isShopFacilityRide(ride)) {
+    return shopFacilityAccessOffset(fallbackRideBodyBounds(ride), normalizeDirection(ride.rotation ?? 1), isExit);
+  }
   return sideAccessOffset(fallbackRideBodyBounds(ride), normalizeDirection(ride.rotation ?? 1), isExit);
 }
 
@@ -1747,6 +1946,23 @@ function sideAccessOffset(bounds, side, isExit) {
     return { x: bounds.x + bounds.w, y: bounds.y + along, direction: 0 };
   }
   return { x: bounds.x + along, y: bounds.y - 1, direction: 1 };
+}
+
+function shopFacilityAccessOffset(bounds, side, isExit) {
+  return bodyEdgeAccessOffset(bounds, normalizeDirection(side + (isExit ? 1 : 0)));
+}
+
+function bodyEdgeAccessOffset(bounds, side) {
+  if (side === 0) {
+    return { x: bounds.x, y: bounds.y, direction: 2 };
+  }
+  if (side === 1) {
+    return { x: bounds.x, y: bounds.y + bounds.h - 1, direction: 3 };
+  }
+  if (side === 2) {
+    return { x: bounds.x + bounds.w - 1, y: bounds.y, direction: 0 };
+  }
+  return { x: bounds.x, y: bounds.y, direction: 1 };
 }
 
 function perpendicularExitAccessOffset(bounds, side) {

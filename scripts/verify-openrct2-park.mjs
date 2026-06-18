@@ -426,10 +426,12 @@ function validateInspection(plan, inspection, phase) {
   const traversalsByRide = traversalsByRideId(inspection.park.trackTraversals ?? []);
   const surfacesByXY = surfacesByCoord(inspection.park.surfaces ?? []);
   const trackSegments = inspection.park.trackSegments ?? {};
+  phaseIssues.push(...validateDuplicateFootpathShapes(footpaths, phase));
   const entranceTiles = footpaths.filter(
     (footpath) => footpath.x === plan.park.entrance.x && footpath.y === plan.park.entrance.y
   );
   const reachable = reachablePathTiles(footpaths, entranceTiles);
+  const landingTiles = requiredFlatLandingTiles(plan, actualRides);
 
   if (entranceTiles.length === 0) {
     phaseIssues.push(`${phase}: no accepted footpath at park entrance ${xyKey(plan.park.entrance)}`);
@@ -477,6 +479,8 @@ function validateInspection(plan, inspection, phase) {
           phaseIssues.push(
             `${phase}: ride ${expected.id} ${access.label} path tile is not connected to the main path at ${coordKey(tile)}`
           );
+        } else if (!connectingCandidates.some((candidate) => reachable.has(pathKey(candidate)) && !isSlopedFootpath(candidate))) {
+          phaseIssues.push(`${phase}: ride ${expected.id} ${access.label} path tile is sloped, expected a flat landing at ${coordKey(tile)}`);
         }
       }
     }
@@ -493,11 +497,60 @@ function validateInspection(plan, inspection, phase) {
         phaseIssues.push(`${phase}: planned path tile was not accepted by OpenRCT2 at ${xyKey(waypoint)}`);
       } else if (!candidates.some((candidate) => reachable.has(pathKey(candidate)))) {
         phaseIssues.push(`${phase}: planned path tile is not connected to the main path at ${xyKey(waypoint)}`);
+      } else if (
+        landingTiles.has(xyKey(waypoint)) &&
+        !candidates.some((candidate) => reachable.has(pathKey(candidate)) && !isSlopedFootpath(candidate))
+      ) {
+        phaseIssues.push(`${phase}: planned path endpoint is sloped, expected a flat joiner at ${xyKey(waypoint)}`);
       }
     }
   }
 
   return phaseIssues;
+}
+
+function validateDuplicateFootpathShapes(footpaths, phase) {
+  const issues = [];
+  const byCoordinate = new Map();
+  for (const footpath of footpaths) {
+    const key = coordKey(footpath);
+    const shapes = byCoordinate.get(key) ?? new Set();
+    shapes.add(footpathShapeKey(footpath));
+    byCoordinate.set(key, shapes);
+  }
+
+  for (const [key, shapes] of byCoordinate) {
+    if (shapes.size > 1) {
+      issues.push(`${phase}: duplicate footpath shapes at ${key}: ${[...shapes].sort().join(", ")}`);
+    }
+  }
+  return issues;
+}
+
+function requiredFlatLandingTiles(plan, actualRides) {
+  const tiles = new Set();
+  for (const expected of plan.rides ?? []) {
+    const rawVisual = Array.isArray(expected.track) && expected.track.some((segment) => segment.raw === true);
+    if (rawVisual) {
+      continue;
+    }
+    const actual = actualRides.find((ride) => ride.name === expected.id || ride.name.startsWith(`${expected.id} `));
+    if (actual === undefined) {
+      continue;
+    }
+    for (const access of actualAccessPathTiles(actual, plan)) {
+      tiles.add(xyKey(access.tile));
+    }
+  }
+  return tiles;
+}
+
+function isSlopedFootpath(footpath) {
+  return footpath.slopeDirection !== null && footpath.slopeDirection !== undefined;
+}
+
+function footpathShapeKey(footpath) {
+  return `${footpath.slopeDirection ?? "flat"}:${footpath.isQueue === true ? "queue" : "path"}`;
 }
 
 function hasRuntimeProblems(inspection, baselineProblemMessages) {

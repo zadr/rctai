@@ -111,6 +111,8 @@ namespace RctaiBuilder {
   const PATH_FLAT = 0;
   const PATH_SLOPED = 1;
   const PATH_HEIGHT_STEP = 16;
+  const PATH_ENDPOINT_LANDING_TILES = 1;
+  const ENTRANCE_SPINE_FLAT_RADIUS = 1;
   const FOOTPRINT_SURFACE_CLEARANCE = 16;
   const GENERATED_TRACK_SURFACE_CLEARANCE = 32;
   const MAX_BUILD_Z = 248 * 8;
@@ -137,6 +139,7 @@ namespace RctaiBuilder {
     "top_spin",
     "twist"
   ]);
+  const SHOP_FACILITY_RIDE_TYPES = new Set(["drink_stall", "food_stall", "information_kiosk", "toilets"]);
 
   export function createBuildSteps(plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
     const resolvePathNetwork = createPathNetworkResolver(plan);
@@ -553,7 +556,12 @@ namespace RctaiBuilder {
     const coords = expandPath(path, plan);
     let cachedSpecs: PathTileBuildSpec[] | null = null;
     const resolveSpecs = (adapter: RctaiBuilder.BuilderAdapter, state: RctaiBuilder.JobState): PathTileBuildSpec[] => {
-      cachedSpecs ??= createPathTileSpecs(path, coords, plan, adapter, state);
+      if (cachedSpecs === null) {
+        const spineProfile = createEntranceSpineProfile(plan, adapter, state);
+        cachedSpecs = createPathTileSpecs(path, coords, plan, adapter, state, spineProfile).map((spec) => {
+          return resolvePathNetwork(adapter, state).get(pathTileBuildSpecKey(spec)) ?? spec;
+        });
+      }
       return cachedSpecs;
     };
 
@@ -599,6 +607,14 @@ namespace RctaiBuilder {
       }));
       const repaired = adapter.repairFootpathEdges(specs);
       adapter.log(`[rctai-builder] repaired ${repaired}/${specs.length} path edge masks`);
+      if (repaired !== specs.length) {
+        done({
+          error: 1,
+          errorTitle: "Path edge repair failed",
+          errorMessage: `OpenRCT2 repaired ${repaired}/${specs.length} planned path edge masks`
+        });
+        return;
+      }
       done({});
     }, { critical: true });
   }
@@ -687,6 +703,11 @@ namespace RctaiBuilder {
     isQueue: boolean;
   }
 
+  interface EntranceSpineProfile {
+    rowY: number;
+    zByX: Map<number, number>;
+  }
+
   type PathNetworkResolver = (
     adapter: RctaiBuilder.BuilderAdapter,
     state: RctaiBuilder.JobState
@@ -739,13 +760,19 @@ namespace RctaiBuilder {
     coords: RctaiBuilder.Coord[],
     plan: RctaiBuilder.ParkPlan,
     adapter: RctaiBuilder.BuilderAdapter,
-    state: RctaiBuilder.JobState
+    state: RctaiBuilder.JobState,
+    spineProfile?: EntranceSpineProfile
   ): PathTileBuildSpec[] {
-    const profile = pathZProfile(
+    const startZ = anchorBuildZ(path.from, plan, state);
+    const endZ = anchorBuildZ(path.to, plan, state);
+    const profile = pathZProfileForPath(
+      path,
       coords,
-      anchorBuildZ(path.from, plan, state),
-      anchorBuildZ(path.to, plan, state),
-      adapter
+      startZ,
+      endZ,
+      adapter,
+      plan,
+      spineProfile
     );
     return coords.map((coord, index) => ({
       coord,
@@ -769,15 +796,16 @@ namespace RctaiBuilder {
     adapter: RctaiBuilder.BuilderAdapter,
     state: RctaiBuilder.JobState
   ): Map<string, PathNetworkBuildSpec> {
+    const spineProfile = createEntranceSpineProfile(plan, adapter, state);
     const byKey = new Map<string, PathNetworkBuildSpec>();
     for (const path of plan.paths ?? []) {
       const coords = expandPath(path, plan);
-      const specs = createPathTileSpecs(path, coords, plan, adapter, state);
+      const specs = createPathTileSpecs(path, coords, plan, adapter, state, spineProfile);
       for (const spec of specs) {
         const key = pathTileBuildSpecKey(spec);
-        if (!byKey.has(key)) {
-          byKey.set(key, { ...spec, edges: 0, isQueue: false });
-        }
+        const existing = byKey.get(key);
+        const selected = existing === undefined ? spec : preferredPathSpec(existing, spec);
+        byKey.set(key, { ...selected, edges: existing?.edges ?? 0, isQueue: existing?.isQueue ?? false });
       }
     }
 
@@ -804,6 +832,13 @@ namespace RctaiBuilder {
     addRideAccessPathEdges(byXY, plan, state);
 
     return byKey;
+  }
+
+  function preferredPathSpec<T extends PathTileBuildSpec>(existing: T, candidate: PathTileBuildSpec): T | PathTileBuildSpec {
+    if (existing.slopeType === PATH_FLAT && candidate.slopeType === PATH_SLOPED) {
+      return candidate;
+    }
+    return existing;
   }
 
   function addRideAccessPathEdges(
@@ -849,6 +884,164 @@ namespace RctaiBuilder {
     return normalizeDirection(spec.slopeDirection) === normalizeDirection(direction) ? spec.z + PATH_HEIGHT_STEP : spec.z;
   }
 
+  function createEntranceSpineProfile(
+    plan: RctaiBuilder.ParkPlan,
+    adapter: RctaiBuilder.BuilderAdapter,
+    state: RctaiBuilder.JobState
+  ): EntranceSpineProfile {
+    const rowY = plan.park.entrance.y;
+    const entranceX = plan.park.entrance.x;
+    const entranceZ = anchorBuildZ("entrance", plan, state);
+    const minimumByX = new Map<number, number>();
+
+    const requireAtLeast = (x: number, z: number): void => {
+      const existing = minimumByX.get(x);
+      minimumByX.set(x, clampBuildZ(Math.max(existing ?? RctaiBuilder.DEFAULT_Z, z)));
+    };
+    const requireSurface = (coord: RctaiBuilder.Coord): void => {
+      requireAtLeast(coord.x, surfaceBuildZ(adapter, coord) ?? RctaiBuilder.DEFAULT_Z);
+    };
+
+    for (const path of plan.paths ?? []) {
+      if (path.from !== "entrance") {
+        continue;
+      }
+      const coords = expandPath(path, plan);
+      if (coords.length === 0 || coords[0]?.x !== entranceX || coords[0]?.y !== rowY) {
+        continue;
+      }
+
+      let index = 0;
+      while (index < coords.length && coords[index]?.y === rowY) {
+        requireSurface(coords[index] ?? plan.park.entrance);
+        index += 1;
+      }
+
+      const branchRoot = coords[index - 1];
+      const firstBranchTile = coords[index];
+      if (branchRoot !== undefined && firstBranchTile !== undefined) {
+        requireAtLeast(branchRoot.x, surfaceBuildZ(adapter, firstBranchTile) ?? RctaiBuilder.DEFAULT_Z);
+      }
+    }
+
+    requireAtLeast(entranceX, entranceZ);
+    const zByX = createFlatEntranceSpineProfile(minimumByX, entranceX, entranceZ);
+    smoothSpineProfile(zByX, minimumByX, entranceX, entranceZ);
+    zByX.set(entranceX, entranceZ);
+    return { rowY, zByX };
+  }
+
+  function createFlatEntranceSpineProfile(
+    minimumByX: Map<number, number>,
+    entranceX: number,
+    entranceZ: number
+  ): Map<number, number> {
+    const spineZ = Math.max(entranceZ, ...minimumByX.values());
+    const zByX = new Map<number, number>();
+    for (const [x, minimum] of minimumByX) {
+      const rampSteps = Math.max(0, Math.abs(x - entranceX) - ENTRANCE_SPINE_FLAT_RADIUS);
+      const rampZ = entranceZ + PATH_HEIGHT_STEP * rampSteps;
+      zByX.set(x, clampBuildZ(Math.max(minimum, Math.min(spineZ, rampZ))));
+    }
+    return zByX;
+  }
+
+  function smoothSpineProfile(
+    zByX: Map<number, number>,
+    minimumByX: Map<number, number>,
+    entranceX: number,
+    entranceZ: number
+  ): void {
+    const xs = [...zByX.keys()].sort((left, right) => left - right);
+    for (let pass = 0; pass < xs.length * 2; pass += 1) {
+      let changed = false;
+      for (let index = 1; index < xs.length; index += 1) {
+        const leftX = xs[index - 1] ?? entranceX;
+        const rightX = xs[index] ?? entranceX;
+        if (rightX !== leftX + 1) {
+          continue;
+        }
+        changed = raiseLowerSpineNeighbor(zByX, minimumByX, entranceX, entranceZ, leftX, rightX) || changed;
+        changed = raiseLowerSpineNeighbor(zByX, minimumByX, entranceX, entranceZ, rightX, leftX) || changed;
+      }
+      if (!changed) {
+        return;
+      }
+    }
+  }
+
+  function raiseLowerSpineNeighbor(
+    zByX: Map<number, number>,
+    minimumByX: Map<number, number>,
+    entranceX: number,
+    entranceZ: number,
+    highX: number,
+    lowX: number
+  ): boolean {
+    const highZ = zByX.get(highX);
+    const lowZ = zByX.get(lowX);
+    if (highZ === undefined || lowZ === undefined || highZ <= lowZ + PATH_HEIGHT_STEP) {
+      return false;
+    }
+    if (Math.abs(lowX - entranceX) <= ENTRANCE_SPINE_FLAT_RADIUS) {
+      zByX.set(lowX, entranceZ);
+      return false;
+    }
+    const raised = clampBuildZ(Math.max(minimumByX.get(lowX) ?? RctaiBuilder.DEFAULT_Z, highZ - PATH_HEIGHT_STEP));
+    if (raised === lowZ) {
+      return false;
+    }
+    zByX.set(lowX, raised);
+    return true;
+  }
+
+  function pathZProfileForPath(
+    path: RctaiBuilder.PathPlan,
+    coords: RctaiBuilder.Coord[],
+    startZ: number,
+    endZ: number,
+    adapter: RctaiBuilder.BuilderAdapter,
+    plan: RctaiBuilder.ParkPlan,
+    spineProfile?: EntranceSpineProfile
+  ): number[] {
+    if (spineProfile === undefined || path.from !== "entrance" || coords[0]?.x !== plan.park.entrance.x) {
+      return pathZProfile(coords, startZ, endZ, adapter);
+    }
+
+    let rowEnd = -1;
+    while (rowEnd + 1 < coords.length) {
+      const coord = coords[rowEnd + 1];
+      if (coord === undefined || coord.y !== spineProfile.rowY || !spineProfile.zByX.has(coord.x)) {
+        break;
+      }
+      rowEnd += 1;
+    }
+
+    if (rowEnd < 0 || rowEnd >= coords.length - 1) {
+      return pathZProfile(coords, startZ, endZ, adapter);
+    }
+
+    const profile = pathZProfile(coords, startZ, endZ, adapter);
+    for (let index = 0; index <= rowEnd; index += 1) {
+      const coord = coords[index];
+      const z = coord === undefined ? undefined : spineProfile.zByX.get(coord.x);
+      if (z !== undefined) {
+        profile[index] = z;
+      }
+    }
+
+    if (rowEnd < coords.length - 1) {
+      const branchCoords = coords.slice(rowEnd);
+      const branchStart = profile[rowEnd] ?? startZ;
+      const branchProfile = pathZProfile(branchCoords, branchStart, endZ, adapter);
+      for (let index = 0; index < branchProfile.length; index += 1) {
+        profile[rowEnd + index] = branchProfile[index] ?? branchStart;
+      }
+    }
+
+    return profile;
+  }
+
   function pathZProfile(
     coords: RctaiBuilder.Coord[],
     startZ: number,
@@ -864,10 +1057,14 @@ namespace RctaiBuilder {
 
     const start = clampBuildZ(startZ);
     const end = clampBuildZ(endZ);
-    const base = directZProfile(coords.length, start, end);
+    const landingTiles = endpointLandingTiles(coords.length, start, end);
+    const base = directZProfile(coords.length, start, end, landingTiles);
     const lastIndex = coords.length - 1;
     const maxFeasible = coords.map((_coord, index) =>
-      Math.min(start + PATH_HEIGHT_STEP * index, end + PATH_HEIGHT_STEP * (lastIndex - index))
+      Math.min(
+        start + PATH_HEIGHT_STEP * Math.max(0, index - landingTiles),
+        end + PATH_HEIGHT_STEP * Math.max(0, lastIndex - landingTiles - index)
+      )
     );
     const minimum = coords.map((coord, index) => {
       const terrainZ = surfaceBuildZ(adapter, coord) ?? RctaiBuilder.DEFAULT_Z;
@@ -879,11 +1076,116 @@ namespace RctaiBuilder {
     profile[0] = start;
     profile[lastIndex] = end;
 
+    enforceEndpointLandings(profile, minimum, maxFeasible, start, end, landingTiles);
+    enforceStartRowLanding(coords, profile, minimum, maxFeasible, start);
+    enforceTurnLandings(coords, profile, minimum, maxFeasible);
     enforcePathStepLimits(profile, maxFeasible, start, end);
     smoothPathSlopeProfile(profile, minimum, maxFeasible);
     enforcePathStepLimits(profile, maxFeasible, start, end);
+    enforceEndpointLandings(profile, minimum, maxFeasible, start, end, landingTiles);
+    enforceStartRowLanding(coords, profile, minimum, maxFeasible, start);
+    enforceTurnLandings(coords, profile, minimum, maxFeasible);
+    enforcePathStepLimits(profile, maxFeasible, start, end);
+    enforceEndpointLandings(profile, minimum, maxFeasible, start, end, landingTiles);
+    enforceStartRowLanding(coords, profile, minimum, maxFeasible, start);
+    enforceTurnLandings(coords, profile, minimum, maxFeasible);
 
     return profile.map(clampBuildZ);
+  }
+
+  function endpointLandingTiles(length: number, start: number, end: number): number {
+    if (length >= PATH_ENDPOINT_LANDING_TILES * 2 + 2) {
+      return PATH_ENDPOINT_LANDING_TILES;
+    }
+    return length >= PATH_ENDPOINT_LANDING_TILES * 2 + 1 && start === end ? PATH_ENDPOINT_LANDING_TILES : 0;
+  }
+
+  function enforceEndpointLandings(
+    profile: number[],
+    minimum: number[],
+    maxFeasible: number[],
+    start: number,
+    end: number,
+    landingTiles: number
+  ): void {
+    if (landingTiles === 0) {
+      return;
+    }
+    for (let index = 0; index <= landingTiles; index += 1) {
+      if ((minimum[index] ?? start) <= start && (maxFeasible[index] ?? start) >= start) {
+        profile[index] = start;
+      }
+    }
+
+    const lastIndex = profile.length - 1;
+    for (let index = lastIndex - landingTiles; index <= lastIndex; index += 1) {
+      if ((minimum[index] ?? end) <= end && (maxFeasible[index] ?? end) >= end) {
+        profile[index] = end;
+      }
+    }
+  }
+
+  function enforceTurnLandings(
+    coords: RctaiBuilder.Coord[],
+    profile: number[],
+    minimum: number[],
+    maxFeasible: number[]
+  ): void {
+    for (let index = 1; index < coords.length - 1; index += 1) {
+      const previous = coords[index - 1];
+      const current = coords[index];
+      const next = coords[index + 1];
+      const after = coords[index + 2];
+      if (previous === undefined || current === undefined || next === undefined || after === undefined) {
+        continue;
+      }
+      const incoming = directionBetweenTiles(previous, current);
+      const outgoing = directionBetweenTiles(current, next);
+      if (incoming === outgoing) {
+        continue;
+      }
+
+      const landingZ = profile[index] ?? RctaiBuilder.DEFAULT_Z;
+      const afterTurnIndex = index + 1;
+      if ((minimum[afterTurnIndex] ?? landingZ) <= landingZ && (maxFeasible[afterTurnIndex] ?? landingZ) >= landingZ) {
+        profile[afterTurnIndex] = landingZ;
+      }
+    }
+  }
+
+  function enforceStartRowLanding(
+    coords: RctaiBuilder.Coord[],
+    profile: number[],
+    minimum: number[],
+    maxFeasible: number[],
+    start: number
+  ): void {
+    const first = coords[0];
+    const second = coords[1];
+    if (first === undefined || second === undefined || first.y !== second.y) {
+      return;
+    }
+
+    let index = 0;
+    while (index < coords.length && coords[index]?.y === first.y) {
+      setProfileHeightIfFeasible(profile, minimum, maxFeasible, index, start);
+      index += 1;
+    }
+    if (index < coords.length) {
+      setProfileHeightIfFeasible(profile, minimum, maxFeasible, index, start);
+    }
+  }
+
+  function setProfileHeightIfFeasible(
+    profile: number[],
+    minimum: number[],
+    maxFeasible: number[],
+    index: number,
+    z: number
+  ): void {
+    if ((minimum[index] ?? z) <= z && (maxFeasible[index] ?? z) >= z) {
+      profile[index] = z;
+    }
   }
 
   function enforcePathStepLimits(profile: number[], maxFeasible: number[], start: number, end: number): void {
@@ -946,7 +1248,28 @@ namespace RctaiBuilder {
     }
   }
 
-  function directZProfile(length: number, start: number, end: number): number[] {
+  function directZProfile(length: number, start: number, end: number, landingTiles = 0): number[] {
+    if (landingTiles === 0) {
+      return directZSpan(length, start, end);
+    }
+
+    const profile = new Array<number>(length);
+    const firstIndex = landingTiles;
+    const lastIndex = length - 1 - landingTiles;
+    const span = directZSpan(lastIndex - firstIndex + 1, start, end);
+    for (let index = 0; index < length; index += 1) {
+      if (index <= firstIndex) {
+        profile[index] = start;
+      } else if (index >= lastIndex) {
+        profile[index] = end;
+      } else {
+        profile[index] = span[index - firstIndex] ?? start;
+      }
+    }
+    return profile;
+  }
+
+  function directZSpan(length: number, start: number, end: number): number[] {
     const profile = [start];
     for (let index = 1; index < length; index += 1) {
       const remainingSteps = length - 1 - index;
@@ -986,8 +1309,7 @@ namespace RctaiBuilder {
   }
 
   function pathTileBuildSpecKey(spec: PathTileBuildSpec): string {
-    const slope = spec.slopeType === PATH_SLOPED ? spec.slopeDirection : "flat";
-    return `${spec.coord.x},${spec.coord.y},${spec.z},${slope}`;
+    return `${spec.coord.x},${spec.coord.y},${spec.z}`;
   }
 
   function directionBetweenTiles(from: RctaiBuilder.Coord, to: RctaiBuilder.Coord): number {
@@ -1159,6 +1481,9 @@ namespace RctaiBuilder {
       return stationOffset;
     }
 
+    if (isShopFacilityRide(ride)) {
+      return shopFacilityAccessOffset(fallbackRideBodyBounds(ride), normalizeDirection(ride.rotation ?? 1), isExit);
+    }
     return sideAccessOffset(fallbackRideBodyBounds(ride), normalizeDirection(ride.rotation ?? 1), isExit);
   }
 
@@ -1248,6 +1573,23 @@ namespace RctaiBuilder {
     return { x: bounds.x + along, y: bounds.y - 1, direction: 1 };
   }
 
+  function shopFacilityAccessOffset(bounds: BodyBounds, side: number, isExit: boolean): RctaiBuilder.CoordD {
+    return bodyEdgeAccessOffset(bounds, normalizeDirection(side + (isExit ? 1 : 0)));
+  }
+
+  function bodyEdgeAccessOffset(bounds: BodyBounds, side: number): RctaiBuilder.CoordD {
+    if (side === 0) {
+      return { x: bounds.x, y: bounds.y, direction: 2 };
+    }
+    if (side === 1) {
+      return { x: bounds.x, y: bounds.y + bounds.h - 1, direction: 3 };
+    }
+    if (side === 2) {
+      return { x: bounds.x + bounds.w - 1, y: bounds.y, direction: 0 };
+    }
+    return { x: bounds.x, y: bounds.y, direction: 1 };
+  }
+
   function perpendicularExitAccessOffset(bounds: BodyBounds, side: number): RctaiBuilder.CoordD {
     if (side === 0) {
       return { x: bounds.x, y: bounds.y - 1, direction: 1 };
@@ -1263,6 +1605,10 @@ namespace RctaiBuilder {
 
   function isSimpleSolidRide(ride: RctaiBuilder.RidePlan): boolean {
     return SIMPLE_SOLID_RIDE_TYPES.has(ride.rideType);
+  }
+
+  function isShopFacilityRide(ride: RctaiBuilder.RidePlan): boolean {
+    return SHOP_FACILITY_RIDE_TYPES.has(ride.rideType);
   }
 
   function stationEntranceExitOffset(ride: RctaiBuilder.RidePlan, isExit: boolean): RctaiBuilder.CoordD | null {
