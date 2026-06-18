@@ -19,6 +19,27 @@ const BRAKES = 99;
 const BLOCK_BRAKES = 216;
 const BRAKE_TRACK_TYPES = new Set([BRAKES, BLOCK_BRAKES]);
 const RIDE_TYPES_WITHOUT_PAINTED_BRAKES = new Set(["miniature_railway", "suspended_monorail"]);
+const SIMPLE_SOLID_RIDE_TYPES = new Set([
+  "dodgems",
+  "drink_stall",
+  "enterprise",
+  "ferris_wheel",
+  "food_stall",
+  "haunted_house",
+  "information_kiosk",
+  "launched_freefall",
+  "magic_carpet",
+  "merry_go_round",
+  "motion_simulator",
+  "observation_tower",
+  "roto_drop",
+  "space_rings",
+  "spiral_slide",
+  "swinging_ship",
+  "toilets",
+  "top_spin",
+  "twist"
+]);
 
 const TRACK_META = {
   0: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
@@ -93,6 +114,7 @@ const issues = [
   ...validatePathGraph(plan),
   ...validatePhysicalPathNetwork(plan),
   ...validatePaintedTrackPieces(plan.rides ?? []),
+  ...validateSimpleRideSolidFootprints(plan),
   ...validateTrackPositionCollisions(plan.rides ?? []),
   ...validateClosedTrackCircuits(plan.rides ?? [])
 ];
@@ -251,6 +273,71 @@ function validateTrackPositionCollisions(rides) {
   return issues;
 }
 
+function validateSimpleRideSolidFootprints(plan) {
+  const issues = [];
+  const solidOwners = new Map();
+  for (const ride of plan.rides ?? []) {
+    if (!isSimpleSolidRide(ride)) {
+      continue;
+    }
+    for (const tile of solidFootprintTileKeys(ride)) {
+      const previous = solidOwners.get(tile);
+      if (previous !== undefined && previous !== ride.id) {
+        issues.push(`${ride.id} simple ride footprint overlaps ${previous} at ${tile}`);
+      } else {
+        solidOwners.set(tile, ride.id);
+      }
+    }
+  }
+
+  for (const pathEdge of plan.paths ?? []) {
+    for (const coord of pathEdge.waypoints ?? []) {
+      const tile = coordKey(coord);
+      const owner = solidOwners.get(tile);
+      if (owner !== undefined) {
+        issues.push(`path ${pathEdge.from}->${pathEdge.to} crosses simple ride ${owner} at ${tile}`);
+      }
+    }
+  }
+
+  for (const ride of plan.rides ?? []) {
+    if (!Array.isArray(ride.track) || ride.track.length === 0) {
+      continue;
+    }
+    let cursor = absoluteTrackStartCursor(ride);
+    for (let index = 0; index < ride.track.length; index += 1) {
+      const segment = ride.track[index];
+      const tile = coordKey(cursor);
+      const owner = solidOwners.get(tile);
+      if (owner !== undefined && owner !== ride.id) {
+        issues.push(`${ride.id} track segment ${index} (${segment.type}) crosses simple ride ${owner} at ${tile}`);
+      }
+
+      const meta = TRACK_META[segment.type];
+      if (meta === undefined) {
+        break;
+      }
+      cursor = advance(cursor, meta);
+    }
+  }
+
+  return issues;
+}
+
+function solidFootprintTileKeys(ride) {
+  const keys = [];
+  for (let x = ride.position.x; x < ride.position.x + ride.footprint.w; x += 1) {
+    for (let y = ride.position.y; y < ride.position.y + ride.footprint.h; y += 1) {
+      keys.push(coordKey({ x, y }));
+    }
+  }
+  return keys;
+}
+
+function isSimpleSolidRide(ride) {
+  return SIMPLE_SOLID_RIDE_TYPES.has(ride.rideType);
+}
+
 function reachablePathTiles(pathTiles, entrance) {
   const visited = new Set();
   const queue = [entrance];
@@ -331,6 +418,13 @@ function stationEntranceExitLocation(ride, isExit) {
 }
 
 function fallbackEntranceExitOffset(ride, isExit) {
+  if (isSimpleSolidRide(ride)) {
+    return {
+      x: isExit ? Math.max(ride.footprint.w - 1, 0) : 0,
+      y: ride.footprint.h,
+      direction: 3
+    };
+  }
   const direction = normalizeDirection(ride.rotation ?? 0);
   if (!isExit) {
     return { x: 0, y: ride.footprint.h, direction };

@@ -116,6 +116,27 @@ namespace RctaiBuilder {
   const MAX_BUILD_Z = 248 * 8;
   const RIDE_SET_VEHICLE_NUM_TRAINS = 0;
   const SINGLE_TRAIN_COUNT = 1;
+  const SIMPLE_SOLID_RIDE_TYPES = new Set([
+    "dodgems",
+    "drink_stall",
+    "enterprise",
+    "ferris_wheel",
+    "food_stall",
+    "haunted_house",
+    "information_kiosk",
+    "launched_freefall",
+    "magic_carpet",
+    "merry_go_round",
+    "motion_simulator",
+    "observation_tower",
+    "roto_drop",
+    "space_rings",
+    "spiral_slide",
+    "swinging_ship",
+    "toilets",
+    "top_spin",
+    "twist"
+  ]);
 
   export function createBuildSteps(plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
     const resolvePathNetwork = createPathNetworkResolver(plan);
@@ -1138,6 +1159,14 @@ namespace RctaiBuilder {
       return stationOffset;
     }
 
+    if (isSimpleSolidRide(ride)) {
+      return {
+        x: isExit ? Math.max(ride.footprint.w - 1, 0) : 0,
+        y: ride.footprint.h,
+        direction: 3
+      };
+    }
+
     if (!isExit) {
       return { x: 0, y: ride.footprint.h };
     }
@@ -1145,6 +1174,10 @@ namespace RctaiBuilder {
       return { x: 1, y: ride.footprint.h };
     }
     return { x: Math.max(ride.footprint.w - 1, 0), y: ride.footprint.h };
+  }
+
+  function isSimpleSolidRide(ride: RctaiBuilder.RidePlan): boolean {
+    return SIMPLE_SOLID_RIDE_TYPES.has(ride.rideType);
   }
 
   function stationEntranceExitOffset(ride: RctaiBuilder.RidePlan, isExit: boolean): RctaiBuilder.CoordD | null {

@@ -137,6 +137,15 @@ const SHOP_VISUALS = [
   { rideType: "information_kiosk", footprint: { w: 1, h: 1 }, trackType: 264 }
 ];
 
+const SIMPLE_SOLID_RIDE_TYPES = new Set([
+  ...GENTLE_FLAT_VISUALS.map((visual) => visual.rideType),
+  ...THRILL_FLAT_VISUALS.map((visual) => visual.rideType),
+  ...SHOP_VISUALS.map((visual) => visual.rideType),
+  "launched_freefall",
+  "observation_tower",
+  "roto_drop"
+]);
+
 const TRACK_META = {
   [FLAT]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
   [END_STATION]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
@@ -1220,6 +1229,9 @@ function trackFeatureSet(ride) {
 function placeRides(rides) {
   const placed = [];
   const occupiedTrackKeys = new Map();
+  const occupiedTrackTiles = new Map();
+  const occupiedAccessTiles = new Map();
+  const occupiedSolidTiles = new Map();
   const centerX = Math.floor(PARK_WIDTH / 2);
   const centerY = Math.floor(PARK_HEIGHT / 2) + 14;
   const clusters = clusterRides(rides);
@@ -1238,9 +1250,19 @@ function placeRides(rides) {
         },
         ride.footprint
       );
-      const position = chooseNonCollidingPosition(ride, basePosition, occupiedTrackKeys);
+      const position = chooseNonCollidingPosition(ride, basePosition, {
+        occupiedTrackKeys,
+        occupiedTrackTiles,
+        occupiedAccessTiles,
+        occupiedSolidTiles
+      });
       const placedRide = { ...ride, position };
-      reserveTrackKeys(placedRide, occupiedTrackKeys);
+      reserveRideOccupancy(placedRide, {
+        occupiedTrackKeys,
+        occupiedTrackTiles,
+        occupiedAccessTiles,
+        occupiedSolidTiles
+      });
       placed.push(placedRide);
     }
   }
@@ -1248,11 +1270,7 @@ function placeRides(rides) {
   return placed;
 }
 
-function chooseNonCollidingPosition(ride, basePosition, occupiedTrackKeys) {
-  if (trackPositionKeysForRideAt(ride, basePosition).length === 0) {
-    return basePosition;
-  }
-
+function chooseNonCollidingPosition(ride, basePosition, occupancy) {
   const seed = hash(`${ride.id}:${ride.name}:placement-search`);
   const seen = new Set();
   for (const candidate of placementCandidates(basePosition, ride.footprint, seed)) {
@@ -1261,13 +1279,39 @@ function chooseNonCollidingPosition(ride, basePosition, occupiedTrackKeys) {
       continue;
     }
     seen.add(key);
-    const collisions = trackPositionKeysForRideAt(ride, candidate).filter((trackKey) => occupiedTrackKeys.has(trackKey));
-    if (collisions.length === 0) {
+    if (!rideCollidesAt(ride, candidate, occupancy)) {
       return candidate;
     }
   }
 
   return basePosition;
+}
+
+function rideCollidesAt(ride, position, { occupiedTrackKeys, occupiedTrackTiles, occupiedAccessTiles, occupiedSolidTiles }) {
+  const trackKeys = trackPositionKeysForRideAt(ride, position);
+  if (trackKeys.some((trackKey) => occupiedTrackKeys.has(trackKey))) {
+    return true;
+  }
+
+  const trackTiles = trackTileKeysForRideAt(ride, position);
+  if (trackTiles.some((trackTile) => occupiedSolidTiles.has(trackTile))) {
+    return true;
+  }
+
+  const accessTiles = rideAccessTileKeysAt(ride, position);
+  if (accessTiles.some((accessTile) => occupiedSolidTiles.has(accessTile))) {
+    return true;
+  }
+
+  if (isSimpleSolidRide(ride)) {
+    const solidTiles = solidFootprintTileKeys({ ...ride, position });
+    return solidTiles.some(
+      (solidTile) =>
+        occupiedSolidTiles.has(solidTile) || occupiedTrackTiles.has(solidTile) || occupiedAccessTiles.has(solidTile)
+    );
+  }
+
+  return false;
 }
 
 function* placementCandidates(basePosition, footprint, seed) {
@@ -1287,9 +1331,20 @@ function* placementCandidates(basePosition, footprint, seed) {
   }
 }
 
-function reserveTrackKeys(ride, occupiedTrackKeys) {
+function reserveRideOccupancy(ride, { occupiedTrackKeys, occupiedTrackTiles, occupiedAccessTiles, occupiedSolidTiles }) {
   for (const trackKey of trackPositionKeysForRideAt(ride, ride.position)) {
     occupiedTrackKeys.set(trackKey, ride.id);
+  }
+  for (const trackTile of trackTileKeysForRideAt(ride, ride.position)) {
+    occupiedTrackTiles.set(trackTile, ride.id);
+  }
+  for (const accessTile of rideAccessTileKeysAt(ride, ride.position)) {
+    occupiedAccessTiles.set(accessTile, ride.id);
+  }
+  if (isSimpleSolidRide(ride)) {
+    for (const solidTile of solidFootprintTileKeys(ride)) {
+      occupiedSolidTiles.set(solidTile, ride.id);
+    }
   }
 }
 
@@ -1312,6 +1367,46 @@ function trackPositionKeysForRideAt(ride, position) {
 
 function trackPositionKey(cursor) {
   return `${cursor.x},${cursor.y},${cursor.z}`;
+}
+
+function trackTileKeysForRideAt(ride, position) {
+  return unique(trackPositionKeysForRideAt(ride, position).map((trackKey) => trackKey.split(",").slice(0, 2).join(",")));
+}
+
+function solidFootprintTileKeys(ride) {
+  const keys = [];
+  for (let x = ride.position.x; x < ride.position.x + ride.footprint.w; x += 1) {
+    for (let y = ride.position.y; y < ride.position.y + ride.footprint.h; y += 1) {
+      keys.push(coordKey({ x, y }));
+    }
+  }
+  return keys;
+}
+
+function rideAccessTileKeysAt(ride, position) {
+  const placedRide = { ...ride, position };
+  return unique([
+    coordKey(ridePathEndpoint(placedRide)),
+    coordKey(entranceExitPathTile(placedRide, false)),
+    coordKey(entranceExitPathTile(placedRide, true))
+  ]);
+}
+
+function simpleRideSolidTileSet(rides) {
+  const tiles = new Set();
+  for (const ride of rides ?? []) {
+    if (!isSimpleSolidRide(ride)) {
+      continue;
+    }
+    for (const tile of solidFootprintTileKeys(ride)) {
+      tiles.add(tile);
+    }
+  }
+  return tiles;
+}
+
+function isSimpleSolidRide(ride) {
+  return SIMPLE_SOLID_RIDE_TYPES.has(ride.rideType);
 }
 
 function clusterRides(rides) {
@@ -1373,6 +1468,7 @@ function clampPosition(position, footprint) {
 
 function buildRidePaths(rides) {
   const paths = [];
+  const blockedTiles = simpleRideSolidTileSet(rides);
   const clusters = clusterRides(rides).map((cluster) => ({
     ...cluster,
     rides: nearestRideOrder(cluster.rides, { x: Math.floor(PARK_WIDTH / 2), y: 4 })
@@ -1390,15 +1486,15 @@ function buildRidePaths(rides) {
       continue;
     }
 
-    paths.push(pathEdge(previousHubId, hub.id, previousPoint, ridePathEndpoint(hub)));
-    paths.push(...rideAccessEdges(hub));
+    paths.push(pathEdge(previousHubId, hub.id, previousPoint, ridePathEndpoint(hub), blockedTiles));
+    paths.push(...rideAccessEdges(hub, blockedTiles));
 
     for (let index = 1; index < cluster.rides.length; index += 1) {
       const previousRide = cluster.rides[index - 1];
       const ride = cluster.rides[index];
       if (previousRide !== undefined && ride !== undefined) {
-        paths.push(pathEdge(previousRide.id, ride.id, ridePathEndpoint(previousRide), ridePathEndpoint(ride)));
-        paths.push(...rideAccessEdges(ride));
+        paths.push(pathEdge(previousRide.id, ride.id, ridePathEndpoint(previousRide), ridePathEndpoint(ride), blockedTiles));
+        paths.push(...rideAccessEdges(ride, blockedTiles));
       }
     }
 
@@ -1456,15 +1552,15 @@ function nearestClusterIndex(clusters, point) {
   return bestIndex;
 }
 
-function pathEdge(from, to, start, end) {
+function pathEdge(from, to, start, end, blockedTiles) {
   return {
     from,
     to,
-    waypoints: orthogonalWaypoints(start, end)
+    waypoints: orthogonalWaypoints(start, end, blockedTiles)
   };
 }
 
-function rideAccessEdges(ride) {
+function rideAccessEdges(ride, blockedTiles) {
   const endpoint = ridePathEndpoint(ride);
   const entrance = entranceExitPathTile(ride, false);
   const exit = entranceExitPathTile(ride, true);
@@ -1473,40 +1569,140 @@ function rideAccessEdges(ride) {
   edges.push({
     from: ride.id,
     to: ride.id,
-    waypoints: orthogonalWaypoints(endpoint, entrance)
+    waypoints: orthogonalWaypoints(endpoint, entrance, blockedTiles)
   });
 
   if (entrance.x !== exit.x || entrance.y !== exit.y) {
     edges.push({
       from: ride.id,
       to: ride.id,
-      waypoints: orthogonalWaypoints(endpoint, exit)
+      waypoints: orthogonalWaypoints(endpoint, exit, blockedTiles)
     });
   }
 
   return edges;
 }
 
-function orthogonalWaypoints(start, end) {
-  const coords = [];
-  const stepX = start.x <= end.x ? 1 : -1;
-  for (let x = start.x; x !== end.x; x += stepX) {
-    coords.push({ x, y: start.y });
+function orthogonalWaypoints(start, end, blockedTiles = new Set()) {
+  for (const xFirst of [true, false]) {
+    const direct = directOrthogonalWaypoints(start, end, xFirst);
+    if (!pathTouchesBlockedTile(direct, blockedTiles, start, end)) {
+      return direct;
+    }
   }
 
-  const stepY = start.y <= end.y ? 1 : -1;
-  for (let y = start.y; y !== end.y; y += stepY) {
-    coords.push({ x: end.x, y });
+  const routed = shortestPathAvoidingBlockedTiles(start, end, blockedTiles);
+  if (routed.length === 0) {
+    throw new Error(`No solid-footprint-safe path from ${coordKey(start)} to ${coordKey(end)}`);
+  }
+  return routed;
+}
+
+function directOrthogonalWaypoints(start, end, xFirst) {
+  const coords = [];
+  if (xFirst) {
+    const stepX = start.x <= end.x ? 1 : -1;
+    for (let x = start.x; x !== end.x; x += stepX) {
+      coords.push({ x, y: start.y });
+    }
+
+    const stepY = start.y <= end.y ? 1 : -1;
+    for (let y = start.y; y !== end.y; y += stepY) {
+      coords.push({ x: end.x, y });
+    }
+  } else {
+    const stepY = start.y <= end.y ? 1 : -1;
+    for (let y = start.y; y !== end.y; y += stepY) {
+      coords.push({ x: start.x, y });
+    }
+
+    const stepX = start.x <= end.x ? 1 : -1;
+    for (let x = start.x; x !== end.x; x += stepX) {
+      coords.push({ x, y: end.y });
+    }
   }
   coords.push(end);
   return dedupeCoords(coords);
 }
 
+function pathTouchesBlockedTile(path, blockedTiles, start, end) {
+  return path.some((coord) => isBlockedPathTile(coord, blockedTiles, start, end));
+}
+
+function shortestPathAvoidingBlockedTiles(start, end, blockedTiles) {
+  const startKey = coordKey(start);
+  const endKey = coordKey(end);
+  const queue = [start];
+  const previous = new Map([[startKey, null]]);
+  let head = 0;
+
+  while (head < queue.length) {
+    const current = queue[head];
+    head += 1;
+    if (coordKey(current) === endKey) {
+      break;
+    }
+
+    for (const next of orderedPathNeighbors(current, end)) {
+      const key = coordKey(next);
+      if (previous.has(key) || !isInsideParkTile(next) || isBlockedPathTile(next, blockedTiles, start, end)) {
+        continue;
+      }
+      previous.set(key, current);
+      queue.push(next);
+    }
+  }
+
+  if (!previous.has(endKey)) {
+    return [];
+  }
+
+  const path = [];
+  for (let current = end; current !== null; current = previous.get(coordKey(current))) {
+    path.push(current);
+  }
+  path.reverse();
+  return dedupeCoords(path);
+}
+
+function orderedPathNeighbors(point, end) {
+  return [
+    { x: point.x + Math.sign(end.x - point.x), y: point.y },
+    { x: point.x, y: point.y + Math.sign(end.y - point.y) },
+    { x: point.x - Math.sign(end.x - point.x), y: point.y },
+    { x: point.x, y: point.y - Math.sign(end.y - point.y) },
+    { x: point.x + 1, y: point.y },
+    { x: point.x - 1, y: point.y },
+    { x: point.x, y: point.y + 1 },
+    { x: point.x, y: point.y - 1 }
+  ].filter(
+    (coord, index, coords) =>
+      (coord.x !== point.x || coord.y !== point.y) &&
+      coords.findIndex((other) => other.x === coord.x && other.y === coord.y) === index
+  );
+}
+
+function isBlockedPathTile(coord, blockedTiles, start, end) {
+  const key = coordKey(coord);
+  return key !== coordKey(start) && key !== coordKey(end) && blockedTiles.has(key);
+}
+
+function isInsideParkTile(coord) {
+  return coord.x >= 0 && coord.y >= 0 && coord.x < PARK_WIDTH && coord.y < PARK_HEIGHT;
+}
+
 function ridePathEndpoint(ride) {
+  if (hasStationSegments(ride)) {
+    return entranceExitPathTile(ride, false);
+  }
   return {
     x: ride.position.x + Math.floor(ride.footprint.w / 2),
     y: Math.min(PARK_HEIGHT - 2, ride.position.y + ride.footprint.h + 1)
   };
+}
+
+function hasStationSegments(ride) {
+  return (ride.track ?? []).some((segment) => segment.type === END_STATION || segment.type === BEGIN_STATION || segment.type === MIDDLE_STATION);
 }
 
 function entranceExitPathTile(ride, isExit) {
@@ -1557,6 +1753,13 @@ function stationEntranceExitLocation(ride, isExit) {
 }
 
 function fallbackEntranceExitOffset(ride, isExit) {
+  if (isSimpleSolidRide(ride)) {
+    return {
+      x: isExit ? Math.max(ride.footprint.w - 1, 0) : 0,
+      y: ride.footprint.h,
+      direction: 3
+    };
+  }
   if (!isExit) {
     return { x: 0, y: ride.footprint.h, direction: normalizeDirection(ride.rotation ?? 0) };
   }
@@ -1623,6 +1826,7 @@ function validateGeneratedPlan(generated) {
     ...validatePathGraph(generated),
     ...validatePhysicalPathNetwork(generated),
     ...validatePaintedTrackPieces(generated.rides),
+    ...validateSimpleRideSolidFootprints(generated),
     ...validateGeneratedTrackPositionCollisions(generated.rides),
     ...validateClosedTrackCircuits(generated.rides)
   ];
@@ -1670,6 +1874,57 @@ function validateGeneratedTrackPositionCollisions(rides) {
       cursor = advance(cursor, meta);
     }
   }
+  return issues;
+}
+
+function validateSimpleRideSolidFootprints(generated) {
+  const issues = [];
+  const solidOwners = new Map();
+  for (const ride of generated.rides ?? []) {
+    if (!isSimpleSolidRide(ride)) {
+      continue;
+    }
+    for (const tile of solidFootprintTileKeys(ride)) {
+      const previous = solidOwners.get(tile);
+      if (previous !== undefined && previous !== ride.id) {
+        issues.push(`${ride.id} simple ride footprint overlaps ${previous} at ${tile}`);
+      } else {
+        solidOwners.set(tile, ride.id);
+      }
+    }
+  }
+
+  for (const pathEdge of generated.paths ?? []) {
+    for (const coord of pathEdge.waypoints ?? []) {
+      const tile = coordKey(coord);
+      const owner = solidOwners.get(tile);
+      if (owner !== undefined) {
+        issues.push(`path ${pathEdge.from}->${pathEdge.to} crosses simple ride ${owner} at ${tile}`);
+      }
+    }
+  }
+
+  for (const ride of generated.rides ?? []) {
+    if (!Array.isArray(ride.track) || ride.track.length === 0) {
+      continue;
+    }
+    let cursor = absoluteTrackStartCursor(ride);
+    for (let index = 0; index < ride.track.length; index += 1) {
+      const segment = ride.track[index];
+      const tile = coordKey(cursor);
+      const owner = solidOwners.get(tile);
+      if (owner !== undefined && owner !== ride.id) {
+        issues.push(`${ride.id} track segment ${index} (${segment.type}) crosses simple ride ${owner} at ${tile}`);
+      }
+
+      const meta = TRACK_META[segment.type];
+      if (meta === undefined) {
+        break;
+      }
+      cursor = advance(cursor, meta);
+    }
+  }
+
   return issues;
 }
 
