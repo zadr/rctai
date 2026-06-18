@@ -94,15 +94,20 @@ More **adventurous** ⇒ front-load inversions; more **risky** ⇒ steeper drops
 bigger **size** ⇒ longer station, taller lift, more helices/turns (consumes more footprint).
 
 ### 3.2 Towers (`launched_freefall` "Whoa Belly", `roto_drop`, `reverse_freefall_rc`)
-No circuit. `towerHeight = round(lerp(16,64, max(size,risk)))`. Launch/drop mode chosen by risk.
+No circuit. Emitted as **`build.tower`** in `park-plan.json` (not `track`):
+`build.tower.height = round(lerp(16,64, max(size,risk)))` (Z steps);
+`build.tower.mode = "launched"` if `risk >= 0.6` else `"drop"`.
 Footprint stays ~3×3 — the "small but risky" shape: tiny on the map, terrifying in the air.
 
 ### 3.3 Transport (`miniature_railway`, `monorail`, `chairlift`, `suspended_monorail`)
-"Big but boring": a long, gently winding **flat** circuit. Length `∝ size`, only
-`straight/curve/slope` groups, **never** inversions. The bigger the PR, the longer the scenic loop.
+"Big but boring": a long, gently winding **flat** circuit. Emitted as **`build.transport`**:
+`build.transport.loopLengthTiles ∝ size`, only `straight/curve/slope` groups, **never** inversions.
+The bigger the PR, the longer the scenic loop.
 
 ### 3.4 Gentle & flat thrill (`merry_go_round`, `spiral_slide`, `maze`, `ferris_wheel`, `swinging_ship`…)
-Single placed ride; footprint from catalog `heights`. `maze` size ∝ size axis. No track gen.
+Single placed ride; footprint from catalog `heights`. For size-parameterised rides (e.g. `maze`) emit
+**`build.flat.sizeTiles`** ∝ size axis; otherwise `build.flat` may be omitted (footprint is enough).
+No track gen.
 
 ### 3.5 Stalls (`information_kiosk`, `food_stall`, `drink_stall`, `toilets`, `cash_machine`)
 1×1 placement beside the path. Used for docs/chore PRs. The sign carries the PR title.
@@ -118,6 +123,13 @@ Single placed ride; footprint from catalog `heights`. `maze` size ∝ size axis.
 | coaster:mid | 8×6 |
 | coaster:mega | 12×9 … 16×12 (by size) |
 | transport | spans the park as a connecting loop |
+
+## 4a. Object availability (plan side)
+A `rideType` (e.g. `looping_rc`) is an engine type; the buildable thing is a **ride object** (a
+`.parkobj`, e.g. `rct2.ride.scht1`). The classifier SHOULD set each ride's `rideObject` to a preferred
+installed object id and the layout SHOULD set `park.requiredObjects` to the de-duplicated union of those
+ids. These are advisory: the builder loads them at runtime and falls back by `rideType`
+(see `PLAN.md §5`). Do **not** assume the base scenario already contains them.
 
 ## 5. Regenerating the data
 ```

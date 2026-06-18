@@ -4,7 +4,8 @@
     "name": "rctai: register",
     "size": { "width": 96, "height": 96 },
     "baseScenario": null,
-    "entrance": { "x": 46, "y": 4, "direction": 2 }
+    "entrance": { "x": 46, "y": 4, "direction": 2 },
+    "requiredObjects": []
   },
   "rides": [
     {
@@ -15,7 +16,8 @@
       "intensity": { "excitement": 2.1, "intensity": 1.8, "nausea": 2.6 },
       "sign": "PR #101 - Bump deps (alice)",
       "axes": { "size": 0.18, "adventure": 0.12, "risk": 0.10 },
-      "track": null
+      "track": null,
+      "build": { "flat": { "sizeTiles": 3 } }
     },
     {
       "id": "PR-102", "name": "Caching layer", "archetype": "looping_coaster",
@@ -35,7 +37,8 @@
       "intensity": { "excitement": 5.2, "intensity": 8.9, "nausea": 7.1 },
       "sign": "PR #103 - Hotfix (carol) RISKY",
       "axes": { "size": 0.22, "adventure": 0.40, "risk": 0.88 },
-      "track": null
+      "track": null,
+      "build": { "tower": { "height": 38, "mode": "launched" } }
     },
     {
       "id": "PR-104", "name": "Settlement engine rewrite", "archetype": "mega_coaster",

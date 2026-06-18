@@ -20,8 +20,13 @@
             "height": { "type": "integer", "minimum": 16, "maximum": 1000 }
           }
         },
-        "baseScenario": { "type": ["string", "null"], "description": "Optional .park template to load before building." },
-        "entrance": { "$ref": "#/definitions/coordD" }
+        "baseScenario": { "type": ["string", "null"], "description": "Optional .park template to load before building. Provides terrain + park entrance only; it does NOT need to pre-select ride objects (the builder loads required objects at runtime via objectManager.load)." },
+        "entrance": { "$ref": "#/definitions/coordD" },
+        "requiredObjects": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Preferred object identifiers (rides, scenery, footpaths) the builder should objectManager.load() into the park before building. Advisory: the builder must still resolve/fall back by rideType and skip+warn if an object is not installed. Typically the union of every ride.rideObject."
+        }
       }
     },
     "rides": { "type": "array", "items": { "$ref": "#/definitions/ride" } },
@@ -57,7 +62,7 @@
           ]
         },
         "rideType": { "type": "string", "description": "Engine ride-type identifier, e.g. spiral_slide, looping_rc, miniature_railway." },
-        "rideObject": { "type": ["string", "null"], "description": "Object id like rct2.ride.arrt1; plugin resolves to index. Null = pick first available for rideType." },
+        "rideObject": { "type": ["string", "null"], "description": "Preferred installed object id, e.g. rct2.ride.arrt1. The builder loads it (objectManager.load) and resolves to an index; if absent it falls back to any installed object whose rideType matches, and skips+warns only if none exist. Null = let the builder choose by rideType." },
         "footprint": {
           "type": "object",
           "required": ["w", "h"],
@@ -97,6 +102,34 @@
               "brakeSpeed": { "type": "integer" },
               "seatRotation": { "type": "integer" },
               "colour": { "type": "integer" }
+            }
+          }
+        },
+        "build": {
+          "type": "object",
+          "description": "Non-track build-out parameters for families that are not laid out as a track piece list (towers, transport circuits, flat rides). Which sub-object is populated depends on the ride family; see docs/ride-mapping.md sections 3.2-3.4. Coasters/water use `track` instead.",
+          "properties": {
+            "tower": {
+              "type": "object",
+              "description": "For tower rides (launched_freefall 'Whoa Belly', roto_drop, reverse_freefall_rc).",
+              "properties": {
+                "height": { "type": "integer", "description": "Tower height in track/Z steps." },
+                "mode": { "enum": ["drop", "launched"], "description": "Drop tower vs launched (whoa-belly) tower." }
+              }
+            },
+            "transport": {
+              "type": "object",
+              "description": "For transport rides (miniature_railway, monorail, chairlift, suspended_monorail) - a long flat winding circuit.",
+              "properties": {
+                "loopLengthTiles": { "type": "integer", "description": "Approximate circuit length in tiles; scales with PR size. Flat only - never inverts." }
+              }
+            },
+            "flat": {
+              "type": "object",
+              "description": "Size hint for flat rides whose in-game footprint is parameterised (e.g. maze) or scaled gentle/thrill rides.",
+              "properties": {
+                "sizeTiles": { "type": "integer", "description": "Edge length in tiles; defaults to footprint when omitted." }
+              }
             }
           }
         }

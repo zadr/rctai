@@ -58,7 +58,15 @@ Treat `OpenRCT2.API` as reference only; do not depend on it for building parks.
 | `fixtures/sample.park-plan.json` | Golden classified+laid-out output for the sample. |
 
 Every tool MUST validate its I/O against these schemas (use `ajv` in node or `jsonschema` in python).
-If a schema must change, bump `schemaVersion`, update both fixtures, and note it in this file.
+Versioning rule: bump `schemaVersion` only for **breaking** changes (removed/renamed/retyped/newly-required
+fields). **Additive optional** fields do not bump the version. Either way, update both fixtures and note
+it here. Spec owners make these changes; agents propose via SPEC-CHANGE notes.
+
+**Changelog:**
+- *2026-06-16* (additive, no version bump): park-plan gains optional `park.requiredObjects[]` and
+  `ride.build.{tower,transport,flat}` (tower height/mode, transport loop length, flat-ride size hints);
+  clarified `ride.rideObject` resolution + base-scenario object loading (see §5). Resolves the two
+  SPEC-CHANGE proposals from the Wave-A orchestrator.
 
 ---
 
@@ -139,12 +147,27 @@ OpenRCT2 JS plugin (`plugin/rctai-builder/`), `typecheck` against `openrct2.d.ts
 - Opens `network.createListener()` on a configurable port; speaks minimal HTTP/1.1.
 - Routes: `GET /health`, `POST /build` (body = park-plan.json), `POST /clear`, `GET /save?name=`.
 - Also supports `--plan <file>` offline mode (read plan from disk, build, save).
-- Build order per ride: `ridecreate` → resolve `rideObject` index for `rideType` → place track or flat
-  ride at `position`/`rotation` → place entrance+exit → `ridesetname` (sign) → `ridesetappearance`
-  (colours) → `ridesetstatus open`. Then place `paths`, then `scenery`.
+- **Phase 0 — ensure objects (do this BEFORE any `ridecreate`).** The base scenario is NOT assumed to
+  contain the ride objects; load them at runtime. For each distinct ride object needed run
+  `ensureRideObject(rideType, preferredId)`:
+    1. If a currently-loaded ride object already has this `rideType`, use its index.
+    2. Else if `preferredId` (ride.rideObject) is installed (`objectManager.getInstalledObject`),
+       `objectManager.load(preferredId)` and use it.
+    3. Else scan `objectManager.installedObjects` for any ride object matching `rideType`, `load()` it.
+    4. Else **skip** that ride, log a warning, and add it to the build report's `skipped[]` — never throw.
+  First `objectManager.load(park.requiredObjects)` in bulk, then resolve per-ride as above. This is the
+  fix for "scenario lacks fixture ride objects" — PR-102/103/104 build as long as *some* matching object
+  is installed on the machine.
+- Build order per ride: resolve object (Phase 0) → `ridecreate` → place track (`track[]`) **or** apply
+  `build.tower`/`build.transport`/`build.flat` **or** flat ride at `position`/`rotation` → place
+  entrance+exit → `ridesetname` (sign) → `ridesetappearance` (colours) → `ridesetstatus open`.
+  Then place `paths`, then `scenery`.
 - `executeAction` is validated/async → run as a **queued state machine** driven by an `interval.tick`
   hook (one action per tick, advance on success, log+skip on failure). Never assume synchronous success.
-- Resolve object ids with `context.getAllObjects("ride")` matching `RideObject.rideType`.
+- `POST /build` returns a **build report**: `{ built: [...ids], skipped: [{id, reason}], warnings }`.
+- **Base-scenario contract:** an `OpenScenarios/*.park` template (or blank map) only needs to provide
+  terrain + a park entrance. Ride/scenery objects are guaranteed by Phase 0, not by the scenario's
+  pre-selected object list.
 
 ---
 
