@@ -848,15 +848,26 @@ namespace RctaiBuilder {
     const maxFeasible = coords.map((_coord, index) =>
       Math.min(start + PATH_HEIGHT_STEP * index, end + PATH_HEIGHT_STEP * (lastIndex - index))
     );
-    const profile = coords.map((coord, index) => {
+    const minimum = coords.map((coord, index) => {
       const terrainZ = surfaceBuildZ(adapter, coord) ?? RctaiBuilder.DEFAULT_Z;
-      const required = Math.max(base[index] ?? start, terrainZ);
+      return Math.max(base[index] ?? start, terrainZ);
+    });
+    const profile = minimum.map((required, index) => {
       return clampBuildZ(Math.min(required, maxFeasible[index] ?? required));
     });
     profile[0] = start;
     profile[lastIndex] = end;
 
-    for (let pass = 0; pass < coords.length; pass += 1) {
+    enforcePathStepLimits(profile, maxFeasible, start, end);
+    smoothPathSlopeProfile(profile, minimum, maxFeasible);
+    enforcePathStepLimits(profile, maxFeasible, start, end);
+
+    return profile.map(clampBuildZ);
+  }
+
+  function enforcePathStepLimits(profile: number[], maxFeasible: number[], start: number, end: number): void {
+    const lastIndex = profile.length - 1;
+    for (let pass = 0; pass < profile.length; pass += 1) {
       for (let index = 1; index < lastIndex; index += 1) {
         const needed = (profile[index - 1] ?? start) - PATH_HEIGHT_STEP;
         if ((profile[index] ?? start) < needed) {
@@ -870,8 +881,48 @@ namespace RctaiBuilder {
         }
       }
     }
+  }
 
-    return profile.map(clampBuildZ);
+  function smoothPathSlopeProfile(profile: number[], minimum: number[], maxFeasible: number[]): void {
+    const lastIndex = profile.length - 1;
+    for (let pass = 0; pass < profile.length; pass += 1) {
+      let changed = false;
+      for (let index = 1; index < lastIndex; index += 1) {
+        const previous = profile[index - 1] ?? profile[index] ?? RctaiBuilder.DEFAULT_Z;
+        const current = profile[index] ?? previous;
+        const next = profile[index + 1] ?? current;
+        const lowerNeighbor = Math.min(previous, next);
+        if (current < lowerNeighbor) {
+          const raised = Math.min(maxFeasible[index] ?? lowerNeighbor, lowerNeighbor);
+          if (raised > current) {
+            profile[index] = raised;
+            changed = true;
+          }
+          continue;
+        }
+
+        const higherNeighbor = Math.max(previous, next);
+        if (current > higherNeighbor) {
+          const lowered = Math.max(minimum[index] ?? current, higherNeighbor);
+          if (lowered < current) {
+            profile[index] = lowered;
+            changed = true;
+            continue;
+          }
+          if (previous < current && (maxFeasible[index - 1] ?? previous) >= current) {
+            profile[index - 1] = current;
+            changed = true;
+          }
+          if (next < current && (maxFeasible[index + 1] ?? next) >= current) {
+            profile[index + 1] = current;
+            changed = true;
+          }
+        }
+      }
+      if (!changed) {
+        return;
+      }
+    }
   }
 
   function directZProfile(length: number, start: number, end: number): number[] {

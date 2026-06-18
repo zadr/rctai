@@ -458,6 +458,7 @@ function buildDynamicTrack({ ride, visualRideType, axes, seed, sideA, sideB, sta
       ride,
       axes,
       seed: sideSeed,
+      loopSeed: sideSeed,
       hillHeight,
       allowLoop,
       relation,
@@ -469,6 +470,7 @@ function buildDynamicTrack({ ride, visualRideType, axes, seed, sideA, sideB, sta
       ride,
       axes,
       seed: sideSeed + 11,
+      loopSeed: sideSeed,
       hillHeight,
       allowLoop,
       relation,
@@ -480,6 +482,7 @@ function buildDynamicTrack({ ride, visualRideType, axes, seed, sideA, sideB, sta
       ride,
       axes,
       seed: sideSeed + 23,
+      loopSeed: sideSeed,
       hillHeight,
       allowLoop,
       relation,
@@ -492,6 +495,7 @@ function buildDynamicTrack({ ride, visualRideType, axes, seed, sideA, sideB, sta
       visualRideType,
       axes,
       seed: sideSeed + 37,
+      loopSeed: sideSeed,
       hillHeight,
       allowLoop,
       relation,
@@ -524,7 +528,7 @@ function buildLiftDrop(axes, hillHeight, budget) {
 function buildConnectedSide(length, role, context) {
   const pieces = [];
   let remaining = length;
-  const candidates = connectedSideCandidates(role, context);
+  const candidates = connectedSideCandidates(length, role, context);
 
   for (const candidate of candidates) {
     const advance = forwardAdvance(candidate);
@@ -591,14 +595,23 @@ function isStraightPreserving(track) {
   return forwardAdvance(track) > 0;
 }
 
-function connectedSideCandidates(role, { ride, visualRideType, axes, seed, hillHeight, allowLoop, relation }) {
+function connectedSideCandidates(length, role, { ride, visualRideType, axes, seed, loopSeed = seed, hillHeight, allowLoop, relation }) {
   const candidates = [];
+  let reservedAdvance = 0;
   if (role === "front") {
-    candidates.push(buildLiftDrop(axes, hillHeight, 10 + hillHeight * 2));
+    const liftDrop = buildLiftDrop(axes, hillHeight, 10 + hillHeight * 2);
+    candidates.push(liftDrop);
+    reservedAdvance += Math.max(0, forwardAdvance(liftDrop));
   }
 
-  if (allowLoop && (role === "front" || role === "back" || relation.clusterSize > 2 || (relation.evolutionCount ?? 1) > 2)) {
-    candidates.push(buildLoopPortal(seed, axes, relation));
+  const requestedLoopPairs = loopPairsForRole(loopSeed, axes, relation, role, allowLoop);
+  if (requestedLoopPairs > 0) {
+    const loopBudget = Math.max(0, length - reservedAdvance);
+    const loopPortal = buildLoopPortal(seed, role, loopBudget, requestedLoopPairs);
+    if (loopPortal.length > 0) {
+      candidates.push(loopPortal);
+      reservedAdvance += Math.max(0, forwardAdvance(loopPortal));
+    }
   }
 
   if (role !== "final" && Math.max(relation.clusterSize ?? 1, relation.evolutionCount ?? 1) > 1) {
@@ -616,14 +629,133 @@ function connectedSideCandidates(role, { ride, visualRideType, axes, seed, hillH
   return candidates.filter((candidate) => isStraightPreserving(candidate));
 }
 
-function buildLoopPortal(seed, axes, relation) {
-  const first = seeded(seed, 90) > 0.5 ? LEFT_LOOP : RIGHT_LOOP;
-  const second = first === LEFT_LOOP ? RIGHT_LOOP : LEFT_LOOP;
-  const pieces = [...buildVerticalLoop(first), ...repeat(FLAT, 1), ...buildVerticalLoop(second)];
-  if ((relation.evolutionCount ?? 1) > 2 || relation.clusterSize > 2 || axes.risk > 0.55) {
-    pieces.push(...repeat(FLAT, 2), ...buildVerticalLoop(second), ...repeat(FLAT, 1), ...buildVerticalLoop(first));
+function loopPairsForRole(seed, axes, relation, role, allowLoop) {
+  if (!allowLoop) {
+    return 0;
   }
+
+  const targetPairs = targetLoopPairCount(seed, axes, relation);
+  if (targetPairs <= 0) {
+    return 0;
+  }
+
+  const allocation = new Map([
+    ["front", 0],
+    ["back", 0],
+    ["side-a", 0]
+  ]);
+  let remaining = targetPairs;
+  for (const allocationRole of loopRoleOrder(seed)) {
+    if (remaining <= 0) {
+      break;
+    }
+    allocation.set(allocationRole, 1);
+    remaining -= 1;
+  }
+
+  while (remaining > 0) {
+    const extraRole = seeded(seed, 340 + remaining) > 0.44 ? "front" : "back";
+    allocation.set(extraRole, (allocation.get(extraRole) ?? 0) + 1);
+    remaining -= 1;
+  }
+
+  return allocation.get(role) ?? 0;
+}
+
+function targetLoopPairCount(seed, axes, relation) {
+  const relatedCount = Math.max(relation.clusterSize ?? 1, relation.evolutionCount ?? 1);
+  const gate = axes.adventure * 0.7 + axes.risk * 0.45 + Math.min(0.45, Math.log2(relatedCount) / 5) + seeded(seed, 305) * 0.65;
+  if (gate < 0.82) {
+    return 0;
+  }
+
+  const maxPairs = clampInt(
+    1 + Math.round(axes.adventure * 1.25 + axes.risk * 1.1 + Math.min(1.35, Math.log2(relatedCount) / 1.7)),
+    1,
+    5
+  );
+  let pairs = 1 + Math.floor(seeded(seed, 306) * maxPairs);
+
+  if (relatedCount >= 6) {
+    pairs = Math.max(pairs, 3 + Math.floor(seeded(seed, 307) * 3));
+  } else if (relatedCount >= 3) {
+    pairs = Math.max(pairs, 1 + Math.floor(seeded(seed, 308) * Math.min(3, maxPairs)));
+  }
+
+  return clampInt(pairs, 1, 5);
+}
+
+function loopRoleOrder(seed) {
+  const orders = [
+    ["front", "back", "side-a"],
+    ["front", "side-a", "back"],
+    ["back", "front", "side-a"],
+    ["side-a", "front", "back"]
+  ];
+  return orders[Math.floor(seeded(seed, 320) * orders.length)] ?? orders[0];
+}
+
+function buildLoopPortal(seed, role, budget, requestedPairs) {
+  const maxPairsByBudget = Math.max(0, Math.floor((budget + 1) / 9));
+  const maxPairs = Math.min(5, maxPairsByBudget);
+  if (maxPairs < 1) {
+    return [];
+  }
+
+  const desiredPairs = Math.min(maxPairs, requestedPairs);
+  for (let pairCount = desiredPairs; pairCount >= 1; pairCount -= 1) {
+    for (const compact of [false, true]) {
+      const pieces = buildLoopPairs(seed, role, pairCount, compact);
+      const advance = forwardAdvance(pieces);
+      if (advance > 0 && advance <= budget) {
+        return pieces;
+      }
+    }
+  }
+
+  return [];
+}
+
+function buildLoopPairs(seed, role, pairCount, compact) {
+  const pieces = [];
+  const salt = loopRoleSalt(role);
+  const alternating = seeded(seed, 150 + salt) > 0.28;
+  const startsLeft = seeded(seed, 151 + salt) > 0.5;
+
+  for (let index = 0; index < pairCount; index += 1) {
+    const reversePair = alternating ? index % 2 === 1 : seeded(seed, 170 + salt + index) > 0.62;
+    const first = startsLeft !== reversePair ? LEFT_LOOP : RIGHT_LOOP;
+    const second = first === LEFT_LOOP ? RIGHT_LOOP : LEFT_LOOP;
+    pieces.push(...buildVerticalLoop(first));
+    pieces.push(...repeat(FLAT, compact ? 0 : loopPairInnerGap(seed, salt, index)));
+    pieces.push(...buildVerticalLoop(second));
+    if (index < pairCount - 1) {
+      pieces.push(...repeat(FLAT, compact ? 0 : loopPairOuterGap(seed, salt, index)));
+    }
+  }
+
   return pieces;
+}
+
+function loopPairInnerGap(seed, salt, index) {
+  return Math.floor(seeded(seed, 190 + salt * 13 + index) * 3);
+}
+
+function loopPairOuterGap(seed, salt, index) {
+  return 1 + Math.floor(seeded(seed, 210 + salt * 17 + index) * 4);
+}
+
+function loopRoleSalt(role) {
+  if (role === "front") {
+    return 1;
+  }
+  if (role === "back") {
+    return 2;
+  }
+  if (role === "side-a") {
+    return 3;
+  }
+  return 4;
 }
 
 function buildVerticalLoop(type) {
@@ -1745,6 +1877,10 @@ function hash(value) {
 
 function clamp(value) {
   return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0.5));
+}
+
+function clampInt(value, min, max) {
+  return Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 }
 
 function normalizeDirection(direction) {

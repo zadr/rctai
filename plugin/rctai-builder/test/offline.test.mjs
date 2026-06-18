@@ -194,3 +194,65 @@ test("offline build emits sloped paths between different anchor heights", () => 
     [16, 16, 16, 16, 16, 32, 48]
   );
 });
+
+test("offline build smooths terrain-induced path z valleys", () => {
+  class BumpyTerrainAdapter extends RctaiBuilder.FakeGameAdapter {
+    getSurfaceZ(x, y) {
+      if (y !== 20) {
+        return null;
+      }
+      if (x === 18) {
+        return 256;
+      }
+      if (x === 19) {
+        return 240;
+      }
+      return null;
+    }
+  }
+
+  const plan = {
+    schemaVersion: 1,
+    park: {
+      name: "path valley smoothing",
+      size: { width: 64, height: 64 },
+      entrance: { x: 10, y: 20, z: 208, direction: 2 }
+    },
+    rides: [
+      {
+        id: "ride-high",
+        name: "High Ride",
+        archetype: "transport",
+        rideType: "miniature_railway",
+        footprint: { w: 3, h: 3 },
+        position: { x: 22, y: 20 },
+        rotation: 2,
+        track: [{ type: 1, x: 0, y: 0, z: 304, direction: 2 }]
+      }
+    ],
+    paths: [
+      {
+        from: "entrance",
+        to: "ride-high",
+        waypoints: Array.from({ length: 13 }, (_value, index) => ({ x: 10 + index, y: 20 }))
+      }
+    ],
+    scenery: []
+  };
+
+  const adapter = new BumpyTerrainAdapter();
+  const controller = new RctaiBuilder.BuildController(adapter);
+  controller.enqueueBuild(plan);
+  const status = controller.runUntilIdle();
+
+  assert.equal(status.failedActions, 0);
+
+  const zValues = adapter.actions.filter((action) => action.action === "footpathplace").map((action) => action.args.z);
+  assert.equal(adapter.inspectPark().rides.length, 1);
+  for (let index = 1; index < zValues.length - 1; index += 1) {
+    assert.ok(
+      !(zValues[index] < zValues[index - 1] && zValues[index] < zValues[index + 1]),
+      `unexpected one-tile path z valley: ${zValues.join(",")}`
+    );
+  }
+});
