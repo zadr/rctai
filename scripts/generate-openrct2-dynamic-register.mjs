@@ -10,7 +10,6 @@ const workModelPath = process.argv[4] ?? "build/register-transcripts/register-tr
 const BASE_Z = 176;
 const PARK_WIDTH = 360;
 const PARK_HEIGHT = 320;
-const MIN_BRANCH_LANE_ENTRANCE_DISTANCE = 12;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 const FLAT = 0;
@@ -1482,8 +1481,6 @@ function buildRidePaths(rides) {
   const blockedTiles = simpleRideSolidTileSet(rides);
   const entrance = { id: "entrance", point: parkEntrancePoint() };
 
-  const reservedBranchLanes = new Set();
-  const reservedPathTiles = new Set();
   for (const [index, ride] of rides.entries()) {
     const accessTiles = rideAccessPathTiles(ride);
     const route = ridePathRoute(
@@ -1491,48 +1488,37 @@ function buildRidePaths(rides) {
       accessTiles,
       entrance,
       blockedTiles,
-      index,
-      reservedBranchLanes,
-      reservedPathTiles
+      index
     );
     paths.push(route.mainPath);
-    reservePathTiles(route.mainPath.waypoints, reservedPathTiles);
 
     for (const accessPath of route.accessPaths) {
       paths.push(accessPath);
-      reservePathTiles(accessPath.waypoints, reservedPathTiles);
     }
   }
 
   return paths;
 }
 
-function ridePathRoute(ride, accessTiles, entrance, blockedTiles, index, reservedBranchLanes, reservedPathTiles) {
+function ridePathRoute(ride, accessTiles, entrance, blockedTiles, index) {
   for (const endpoint of ridePathEndpointCandidates(ride, blockedTiles)) {
-    const tentativeBranchLanes = new Set(reservedBranchLanes);
     const mainPath = mainPathEdge(
       entrance.id,
       ride.id,
       entrance.point,
       endpoint,
       blockedTiles,
-      index,
-      tentativeBranchLanes,
-      reservedPathTiles
+      index
     );
     const accessPaths = rideAccessPaths(ride.id, endpoint, accessTiles, blockedTiles);
     if (!accessPathsOverlapMainRoute(endpoint, accessPaths, mainPath)) {
-      reservedBranchLanes.clear();
-      for (const branchLane of tentativeBranchLanes) {
-        reservedBranchLanes.add(branchLane);
-      }
       return { mainPath, accessPaths };
     }
   }
 
   const endpoint = ridePathEndpoint(ride, blockedTiles);
   return {
-    mainPath: mainPathEdge(entrance.id, ride.id, entrance.point, endpoint, blockedTiles, index, reservedBranchLanes, reservedPathTiles),
+    mainPath: mainPathEdge(entrance.id, ride.id, entrance.point, endpoint, blockedTiles, index),
     accessPaths: rideAccessPaths(ride.id, endpoint, accessTiles, blockedTiles)
   };
 }
@@ -1558,26 +1544,14 @@ function accessPathsOverlapMainRoute(endpoint, accessPaths, mainPath) {
   );
 }
 
-function mainPathEdge(from, to, start, end, blockedTiles, index, reservedBranchLanes, reservedPathTiles) {
+function mainPathEdge(from, to, start, end, blockedTiles, index) {
   for (const branchX of branchLaneCandidates(end.x, index)) {
-    if (reservedBranchLanes.has(branchX)) {
-      continue;
-    }
-    const waypoints = branchPathBetween(start, end, branchX, blockedTiles, reservedPathTiles);
+    const waypoints = branchPathBetween(start, end, branchX, blockedTiles);
     if (waypoints !== null) {
-      reservedBranchLanes.add(branchX);
       return { from, to, waypoints };
     }
   }
   return pathEdge(from, to, start, end, blockedTiles);
-}
-
-function reservePathTiles(waypoints, reservedPathTiles) {
-  for (const waypoint of waypoints ?? []) {
-    if (waypoint.y !== parkEntrancePoint().y) {
-      reservedPathTiles.add(coordKey(waypoint));
-    }
-  }
 }
 
 function branchLaneCandidates(targetX, index) {
@@ -1585,25 +1559,26 @@ function branchLaneCandidates(targetX, index) {
   const seen = new Set();
   const add = (x) => {
     const clamped = Math.max(4, Math.min(PARK_WIDTH - 5, Math.round(x)));
-    if (Math.abs(clamped - parkEntrancePoint().x) <= MIN_BRANCH_LANE_ENTRANCE_DISTANCE) {
-      return;
-    }
     if (!seen.has(clamped)) {
       seen.add(clamped);
       candidates.push(clamped);
     }
   };
 
-  add(8 + ((index * 37) % (PARK_WIDTH - 16)));
   add(targetX);
-  for (let offset = 1; offset < PARK_WIDTH; offset += 1) {
+  const preferredStep = index % 2 === 0 ? 1 : -1;
+  for (let offset = 1; offset <= 48; offset += 1) {
+    add(targetX + offset * preferredStep);
+    add(targetX - offset * preferredStep);
+  }
+  for (let offset = 49; offset < PARK_WIDTH; offset += 1) {
     add(targetX + offset);
     add(targetX - offset);
   }
   return candidates;
 }
 
-function branchPathBetween(start, end, branchX, blockedTiles, reservedPathTiles) {
+function branchPathBetween(start, end, branchX, blockedTiles) {
   const corners = [
     start,
     { x: branchX, y: start.y },
@@ -1619,8 +1594,7 @@ function branchPathBetween(start, end, branchX, blockedTiles, reservedPathTiles)
     for (const coord of segment) {
       if (
         !isInsideParkTile(coord) ||
-        isBlockedPathTile(coord, blockedTiles, start, end) ||
-        isReservedPathTile(coord, reservedPathTiles, start, end)
+        isBlockedPathTile(coord, blockedTiles, start, end)
       ) {
         return null;
       }
@@ -1628,13 +1602,6 @@ function branchPathBetween(start, end, branchX, blockedTiles, reservedPathTiles)
     }
   }
   return dedupeCoords(path);
-}
-
-function isReservedPathTile(coord, reservedPathTiles, start, end) {
-  return coord.y !== parkEntrancePoint().y &&
-    coordKey(coord) !== coordKey(start) &&
-    coordKey(coord) !== coordKey(end) &&
-    reservedPathTiles.has(coordKey(coord));
 }
 
 function straightPathSegment(start, end) {
