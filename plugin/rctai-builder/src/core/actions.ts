@@ -198,7 +198,7 @@ namespace RctaiBuilder {
     ];
 
     for (const ride of plan.rides) {
-      steps.push(...createRideSteps(ride, plan));
+      steps.push(...createRideSteps(ride, plan, resolvePathNetwork));
     }
 
     for (const path of plan.paths ?? []) {
@@ -261,7 +261,11 @@ namespace RctaiBuilder {
     return value * RctaiBuilder.TILE_UNITS;
   }
 
-  function createRideSteps(ride: RctaiBuilder.RidePlan, plan: RctaiBuilder.ParkPlan): RctaiBuilder.QueuedStep[] {
+  function createRideSteps(
+    ride: RctaiBuilder.RidePlan,
+    plan: RctaiBuilder.ParkPlan,
+    resolvePathNetwork: PathNetworkResolver
+  ): RctaiBuilder.QueuedStep[] {
     const steps: RctaiBuilder.QueuedStep[] = [];
     const fallbackBuildZ = planBuildZ(plan);
 
@@ -280,7 +284,10 @@ namespace RctaiBuilder {
     }
 
     if (!isRawVisualRide(ride)) {
-      steps.push(createEntranceExitStep(ride, false, fallbackBuildZ), createEntranceExitStep(ride, true, fallbackBuildZ));
+      steps.push(
+        createEntranceExitStep(ride, false, fallbackBuildZ, plan, resolvePathNetwork),
+        createEntranceExitStep(ride, true, fallbackBuildZ, plan, resolvePathNetwork)
+      );
     }
 
     steps.push(
@@ -493,9 +500,15 @@ namespace RctaiBuilder {
     });
   }
 
-  function createEntranceExitStep(ride: RctaiBuilder.RidePlan, isExit: boolean, buildZ: number): RctaiBuilder.QueuedStep {
+  function createEntranceExitStep(
+    ride: RctaiBuilder.RidePlan,
+    isExit: boolean,
+    buildZ: number,
+    plan: RctaiBuilder.ParkPlan,
+    resolvePathNetwork: PathNetworkResolver
+  ): RctaiBuilder.QueuedStep {
     const label = isExit ? "exit" : "entrance";
-    return RctaiBuilder.createGameActionStep(`place ${label} ${ride.id}`, "rideentranceexitplace", (_adapter, state) => {
+    return RctaiBuilder.createGameActionStep(`place ${label} ${ride.id}`, "rideentranceexitplace", (adapter, state) => {
       if (state.failedRideIds[ride.id] === true) {
         return null;
       }
@@ -505,16 +518,40 @@ namespace RctaiBuilder {
       }
 
       const exitOffset = entranceExitOffset(ride, isExit);
+      const direction = normalizeDirection(exitOffset.direction ?? ride.rotation ?? 0);
       return {
         x: tileToGame(ride.position.x + exitOffset.x),
         y: tileToGame(ride.position.y + exitOffset.y),
-        z: exitOffset.z ?? rideBuildZ(ride, state, buildZ),
-        direction: normalizeDirection(exitOffset.direction ?? ride.rotation ?? 0),
+        z: entranceExitBuildZ(ride, exitOffset, direction, buildZ, plan, adapter, state, resolvePathNetwork),
+        direction,
         ride: rideId,
         station: 0,
         isExit
       };
     }, undefined, { critical: true, rideId: ride.id });
+  }
+
+  function entranceExitBuildZ(
+    ride: RctaiBuilder.RidePlan,
+    offset: RctaiBuilder.CoordD,
+    direction: number,
+    buildZ: number,
+    plan: RctaiBuilder.ParkPlan,
+    adapter: RctaiBuilder.BuilderAdapter,
+    state: RctaiBuilder.JobState,
+    resolvePathNetwork: PathNetworkResolver
+  ): number {
+    if (offset.z !== undefined) {
+      return offset.z;
+    }
+
+    const delta = directionTileDelta(direction);
+    const accessCoord = {
+      x: ride.position.x + offset.x - delta.x,
+      y: ride.position.y + offset.y - delta.y
+    };
+    const accessPath = resolvePathNetwork(adapter, state).get(pathCoordKey(accessCoord));
+    return accessPath === undefined ? rideBuildZ(ride, state, buildZ) : pathSpecEdgeZ(accessPath, direction);
   }
 
   function createNameStep(ride: RctaiBuilder.RidePlan): RctaiBuilder.QueuedStep {
@@ -713,6 +750,11 @@ namespace RctaiBuilder {
     endZ?: number;
   }
 
+  interface PathJoinerInfo {
+    directions: Set<number>;
+    isEndpoint: boolean;
+  }
+
   type PathNetworkResolver = (
     adapter: RctaiBuilder.BuilderAdapter,
     state: RctaiBuilder.JobState
@@ -767,7 +809,8 @@ namespace RctaiBuilder {
     adapter: RctaiBuilder.BuilderAdapter,
     state: RctaiBuilder.JobState,
     spineProfile?: EntranceSpineProfile,
-    zOverrides?: PathEndpointZOverrides
+    zOverrides?: PathEndpointZOverrides,
+    flatJoiners: ReadonlySet<string> = new Set()
   ): PathTileBuildSpec[] {
     const startZ = zOverrides?.startZ ?? anchorBuildZ(path.from, plan, state);
     const endZ = zOverrides?.endZ ?? anchorBuildZ(path.to, plan, state);
@@ -778,12 +821,13 @@ namespace RctaiBuilder {
       endZ,
       adapter,
       plan,
-      spineProfile
+      spineProfile,
+      flatJoiners
     );
     return coords.map((coord, index) => ({
       coord,
       z: profile[index] ?? planBuildZ(plan),
-      ...pathSlopeForTile(coords, profile, index)
+      ...pathSlopeForTile(coords, profile, index, flatJoiners)
     }));
   }
 
@@ -803,17 +847,28 @@ namespace RctaiBuilder {
     state: RctaiBuilder.JobState
   ): Map<string, PathNetworkBuildSpec> {
     const spineProfile = createEntranceSpineProfile(plan, adapter, state);
+    const flatJoiners = flatPathJoinerSet(plan);
     const byKey = new Map<string, PathNetworkBuildSpec>();
     for (const path of plan.paths ?? []) {
       const coords = expandPath(path, plan);
-      const specs = createPathTileSpecs(path, coords, plan, adapter, state, spineProfile, pathEndpointZOverrides(coords, byKey));
+      const specs = createPathTileSpecs(
+        path,
+        coords,
+        plan,
+        adapter,
+        state,
+        spineProfile,
+        pathEndpointZOverrides(coords, byKey),
+        flatJoiners
+      );
       for (const spec of specs) {
         const key = pathCoordKey(spec.coord);
         const existing = byKey.get(key);
-        const selected = existing ?? spec;
-        byKey.set(key, { ...selected, edges: existing?.edges ?? 0, isQueue: existing?.isQueue ?? false });
+        byKey.set(key, mergePathNetworkSpec(existing, spec));
       }
     }
+
+    normalizePathNetworkSpecs(plan, state, byKey, flatJoiners);
 
     const byXY = new Map<string, PathNetworkBuildSpec[]>();
     for (const spec of byKey.values()) {
@@ -838,6 +893,275 @@ namespace RctaiBuilder {
     addRideAccessPathEdges(byXY, plan, state);
 
     return byKey;
+  }
+
+  function mergePathNetworkSpec(
+    existing: PathNetworkBuildSpec | undefined,
+    spec: PathTileBuildSpec
+  ): PathNetworkBuildSpec {
+    if (existing === undefined) {
+      return { ...spec, edges: 0, isQueue: false };
+    }
+    return {
+      ...existing,
+      z: Math.max(existing.z, spec.z),
+      slopeType: existing.slopeType === PATH_FLAT || spec.slopeType === PATH_FLAT ? PATH_FLAT : existing.slopeType,
+      slopeDirection: existing.slopeDirection
+    };
+  }
+
+  function normalizePathNetworkSpecs(
+    plan: RctaiBuilder.ParkPlan,
+    state: RctaiBuilder.JobState,
+    byKey: Map<string, PathNetworkBuildSpec>,
+    flatJoiners: ReadonlySet<string>
+  ): void {
+    const adjacency = pathNetworkAdjacency(plan);
+    const fixedZ = fixedPathZMap(plan, state);
+    const maxZ = pathNetworkMaxZ(adjacency, fixedZ, flatJoiners);
+    for (let pass = 0; pass < byKey.size; pass += 1) {
+      let changed = false;
+      changed = applyPathNetworkZBounds(byKey, fixedZ, maxZ) || changed;
+      for (const [key, spec] of byKey) {
+        const neighbors = pathNetworkNeighbors(key, adjacency, byKey);
+        if (flatJoiners.has(key)) {
+          for (const neighbor of neighbors) {
+            changed = raisePathNetworkSpec(spec, neighbor.z, fixedZ, maxZ) || changed;
+          }
+          continue;
+        }
+
+        const higherNeighbors = neighbors.filter((neighbor) => neighbor.z > spec.z);
+        if (higherNeighbors.length > 1) {
+          const target = Math.max(...higherNeighbors.map((neighbor) => neighbor.z));
+          changed = raisePathNetworkSpec(spec, target, fixedZ, maxZ) || changed;
+        }
+      }
+
+      for (const [key, spec] of byKey) {
+        for (const neighborKey of adjacency.get(key) ?? []) {
+          if (key >= neighborKey) {
+            continue;
+          }
+          const neighbor = byKey.get(neighborKey);
+          if (neighbor === undefined) {
+            continue;
+          }
+          const high = spec.z >= neighbor.z ? spec : neighbor;
+          const low = spec.z >= neighbor.z ? neighbor : spec;
+          if (high.z > low.z + PATH_HEIGHT_STEP) {
+            const lowKey = pathCoordKey(low.coord);
+            const target = flatJoiners.has(lowKey) ? high.z : high.z - PATH_HEIGHT_STEP;
+            changed = raisePathNetworkSpec(low, target, fixedZ, maxZ) || changed;
+            if (high.z > low.z + PATH_HEIGHT_STEP) {
+              const loweredTarget = flatJoiners.has(lowKey) ? low.z : low.z + PATH_HEIGHT_STEP;
+              changed = lowerPathNetworkSpec(high, loweredTarget, fixedZ, maxZ) || changed;
+            }
+          }
+        }
+      }
+
+      if (!changed) {
+        break;
+      }
+    }
+    applyPathNetworkZBounds(byKey, fixedZ, maxZ);
+
+    for (const [key, spec] of byKey) {
+      spec.slopeType = PATH_FLAT;
+      spec.slopeDirection = 0;
+      if (flatJoiners.has(key)) {
+        continue;
+      }
+      const higherNeighbor = pathNetworkNeighbors(key, adjacency, byKey).find(
+        (neighbor) => neighbor.z === spec.z + PATH_HEIGHT_STEP
+      );
+      if (higherNeighbor !== undefined) {
+        spec.slopeType = PATH_SLOPED;
+        spec.slopeDirection = directionBetweenTiles(spec.coord, higherNeighbor.coord);
+      }
+    }
+  }
+
+  function fixedPathZMap(plan: RctaiBuilder.ParkPlan, state: RctaiBuilder.JobState): Map<string, number> {
+    const fixed = new Map<string, number>();
+    fixed.set(pathCoordKey(plan.park.entrance), anchorBuildZ("entrance", plan, state));
+
+    for (const ride of plan.rides) {
+      if (isRawVisualRide(ride)) {
+        continue;
+      }
+      for (const isExit of [false, true]) {
+        const offset = entranceExitOffset(ride, isExit);
+        const direction = normalizeDirection(offset.direction ?? ride.rotation ?? 0);
+        const delta = directionTileDelta(direction);
+        const coord = {
+          x: ride.position.x + offset.x - delta.x,
+          y: ride.position.y + offset.y - delta.y
+        };
+        fixed.set(pathCoordKey(coord), offset.z ?? rideBuildZ(ride, state, planBuildZ(plan)));
+      }
+    }
+
+    return fixed;
+  }
+
+  function pathNetworkMaxZ(
+    adjacency: Map<string, Set<string>>,
+    fixedZ: ReadonlyMap<string, number>,
+    flatJoiners: ReadonlySet<string>
+  ): Map<string, number> {
+    const maxZ = new Map<string, number>(fixedZ);
+    const queue = [...fixedZ.keys()].sort();
+    while (queue.length > 0) {
+      const key = queue.shift();
+      if (key === undefined) {
+        continue;
+      }
+      const z = maxZ.get(key);
+      if (z === undefined) {
+        continue;
+      }
+      const neighborMax = z + (flatJoiners.has(key) ? 0 : PATH_HEIGHT_STEP);
+      for (const neighborKey of adjacency.get(key) ?? []) {
+        const existing = maxZ.get(neighborKey);
+        if (existing === undefined || neighborMax < existing) {
+          maxZ.set(neighborKey, neighborMax);
+          queue.push(neighborKey);
+        }
+      }
+    }
+    return maxZ;
+  }
+
+  function applyPathNetworkZBounds(
+    byKey: Map<string, PathNetworkBuildSpec>,
+    fixedZ: ReadonlyMap<string, number>,
+    maxZ: ReadonlyMap<string, number>
+  ): boolean {
+    let changed = false;
+    for (const [key, spec] of byKey) {
+      const fixed = fixedZ.get(key);
+      const bounded = fixed ?? Math.min(spec.z, maxZ.get(key) ?? spec.z);
+      if (spec.z !== bounded) {
+        spec.z = bounded;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  function pathNetworkAdjacency(plan: RctaiBuilder.ParkPlan): Map<string, Set<string>> {
+    const adjacency = new Map<string, Set<string>>();
+    for (const path of plan.paths ?? []) {
+      const coords = expandPath(path, plan);
+      for (let index = 0; index < coords.length - 1; index += 1) {
+        const current = coords[index];
+        const next = coords[index + 1];
+        if (current === undefined || next === undefined) {
+          continue;
+        }
+        addPathNetworkNeighbor(adjacency, pathCoordKey(current), pathCoordKey(next));
+        addPathNetworkNeighbor(adjacency, pathCoordKey(next), pathCoordKey(current));
+      }
+    }
+    return adjacency;
+  }
+
+  function addPathNetworkNeighbor(adjacency: Map<string, Set<string>>, key: string, neighborKey: string): void {
+    const neighbors = adjacency.get(key) ?? new Set<string>();
+    neighbors.add(neighborKey);
+    adjacency.set(key, neighbors);
+  }
+
+  function pathNetworkNeighbors(
+    key: string,
+    adjacency: Map<string, Set<string>>,
+    byKey: Map<string, PathNetworkBuildSpec>
+  ): PathNetworkBuildSpec[] {
+    return [...(adjacency.get(key) ?? [])]
+      .map((neighborKey) => byKey.get(neighborKey))
+      .filter((neighbor): neighbor is PathNetworkBuildSpec => neighbor !== undefined);
+  }
+
+  function raisePathNetworkSpec(
+    spec: PathNetworkBuildSpec,
+    z: number,
+    fixedZ: ReadonlyMap<string, number>,
+    maxZ: ReadonlyMap<string, number>
+  ): boolean {
+    const key = pathCoordKey(spec.coord);
+    if (fixedZ.has(key)) {
+      return false;
+    }
+    const nextZ = Math.min(clampBuildZ(z), maxZ.get(key) ?? MAX_BUILD_Z);
+    if (nextZ <= spec.z) {
+      return false;
+    }
+    spec.z = nextZ;
+    return true;
+  }
+
+  function lowerPathNetworkSpec(
+    spec: PathNetworkBuildSpec,
+    z: number,
+    fixedZ: ReadonlyMap<string, number>,
+    maxZ: ReadonlyMap<string, number>
+  ): boolean {
+    const key = pathCoordKey(spec.coord);
+    if (fixedZ.has(key)) {
+      return false;
+    }
+    const nextZ = Math.min(clampBuildZ(z), maxZ.get(key) ?? MAX_BUILD_Z);
+    if (nextZ >= spec.z) {
+      return false;
+    }
+    spec.z = nextZ;
+    return true;
+  }
+
+  function flatPathJoinerSet(plan: RctaiBuilder.ParkPlan): Set<string> {
+    const byCoord = new Map<string, PathJoinerInfo>();
+    for (const path of plan.paths ?? []) {
+      const coords = expandPath(path, plan);
+      for (let index = 0; index < coords.length; index += 1) {
+        const coord = coords[index];
+        if (coord === undefined) {
+          continue;
+        }
+        const key = pathCoordKey(coord);
+        const info = byCoord.get(key) ?? { directions: new Set<number>(), isEndpoint: false };
+        info.isEndpoint = info.isEndpoint || index === 0 || index === coords.length - 1;
+
+        const previous = coords[index - 1];
+        const next = coords[index + 1];
+        if (previous !== undefined) {
+          info.directions.add(directionBetweenTiles(coord, previous));
+        }
+        if (next !== undefined) {
+          info.directions.add(directionBetweenTiles(coord, next));
+        }
+        byCoord.set(key, info);
+      }
+    }
+
+    const flatJoiners = new Set<string>();
+    for (const [key, info] of byCoord) {
+      if (info.isEndpoint || !isStraightThroughPath(info.directions)) {
+        flatJoiners.add(key);
+      }
+    }
+    return flatJoiners;
+  }
+
+  function isStraightThroughPath(directions: ReadonlySet<number>): boolean {
+    if (directions.size !== 2) {
+      return false;
+    }
+    const directionList = [...directions];
+    const first = directionList[0];
+    const second = directionList[1];
+    return first !== undefined && second !== undefined && normalizeDirection(first + 2) === normalizeDirection(second);
   }
 
   function pathEndpointZOverrides(
@@ -878,7 +1202,7 @@ namespace RctaiBuilder {
         const z = offset.z ?? rideBuildZ(ride, state, planBuildZ(plan));
         const candidates = byXY.get(pathCoordKey(coord)) ?? [];
         for (const spec of candidates) {
-          if (pathSpecEdgeZ(spec, direction) === z) {
+          if (offset.z === undefined || pathSpecEdgeZ(spec, direction) === z) {
             spec.edges |= 1 << direction;
           }
         }
@@ -1019,10 +1343,11 @@ namespace RctaiBuilder {
     endZ: number,
     adapter: RctaiBuilder.BuilderAdapter,
     plan: RctaiBuilder.ParkPlan,
-    spineProfile?: EntranceSpineProfile
+    spineProfile?: EntranceSpineProfile,
+    flatJoiners: ReadonlySet<string> = new Set()
   ): number[] {
     if (spineProfile === undefined || path.from !== "entrance" || coords[0]?.x !== plan.park.entrance.x) {
-      return pathZProfile(coords, startZ, endZ, adapter);
+      return pathZProfile(coords, startZ, endZ, adapter, flatJoiners);
     }
 
     let rowEnd = -1;
@@ -1035,10 +1360,10 @@ namespace RctaiBuilder {
     }
 
     if (rowEnd < 0 || rowEnd >= coords.length - 1) {
-      return pathZProfile(coords, startZ, endZ, adapter);
+      return pathZProfile(coords, startZ, endZ, adapter, flatJoiners);
     }
 
-    const profile = pathZProfile(coords, startZ, endZ, adapter);
+    const profile = pathZProfile(coords, startZ, endZ, adapter, flatJoiners);
     for (let index = 0; index <= rowEnd; index += 1) {
       const coord = coords[index];
       const z = coord === undefined ? undefined : spineProfile.zByX.get(coord.x);
@@ -1050,7 +1375,7 @@ namespace RctaiBuilder {
     if (rowEnd < coords.length - 1) {
       const branchCoords = coords.slice(rowEnd);
       const branchStart = profile[rowEnd] ?? startZ;
-      const branchProfile = pathZProfile(branchCoords, branchStart, endZ, adapter);
+      const branchProfile = pathZProfile(branchCoords, branchStart, endZ, adapter, flatJoiners);
       for (let index = 0; index < branchProfile.length; index += 1) {
         profile[rowEnd + index] = branchProfile[index] ?? branchStart;
       }
@@ -1063,7 +1388,8 @@ namespace RctaiBuilder {
     coords: RctaiBuilder.Coord[],
     startZ: number,
     endZ: number,
-    adapter: RctaiBuilder.BuilderAdapter
+    adapter: RctaiBuilder.BuilderAdapter,
+    flatJoiners: ReadonlySet<string> = new Set()
   ): number[] {
     if (coords.length === 0) {
       return [];
@@ -1093,22 +1419,29 @@ namespace RctaiBuilder {
     profile[0] = start;
     profile[lastIndex] = end;
 
-    enforceEndpointLandings(profile, minimum, maxFeasible, start, end, landingTiles);
-    enforceStartRowLanding(coords, profile, minimum, maxFeasible, start);
-    enforceTurnLandings(coords, profile, minimum, maxFeasible);
-    enforcePathStepLimits(profile, maxFeasible, start, end);
+    enforceWalkablePathProfile(coords, profile, minimum, maxFeasible, start, end, landingTiles, flatJoiners);
     smoothPathSlopeProfile(profile, minimum, maxFeasible);
-    enforcePathStepLimits(profile, maxFeasible, start, end);
-    enforceEndpointLandings(profile, minimum, maxFeasible, start, end, landingTiles);
-    enforceStartRowLanding(coords, profile, minimum, maxFeasible, start);
-    enforceTurnLandings(coords, profile, minimum, maxFeasible);
-    enforcePathStepLimits(profile, maxFeasible, start, end);
-    enforceEndpointLandings(profile, minimum, maxFeasible, start, end, landingTiles);
-    enforceStartRowLanding(coords, profile, minimum, maxFeasible, start);
-    enforceTurnLandings(coords, profile, minimum, maxFeasible);
-    enforcePathStepLimits(profile, maxFeasible, start, end);
+    enforceWalkablePathProfile(coords, profile, minimum, maxFeasible, start, end, landingTiles, flatJoiners);
+    enforceWalkablePathProfile(coords, profile, minimum, maxFeasible, start, end, landingTiles, flatJoiners);
 
     return profile.map(clampBuildZ);
+  }
+
+  function enforceWalkablePathProfile(
+    coords: RctaiBuilder.Coord[],
+    profile: number[],
+    minimum: number[],
+    maxFeasible: number[],
+    start: number,
+    end: number,
+    landingTiles: number,
+    flatJoiners: ReadonlySet<string>
+  ): void {
+    enforceEndpointLandings(profile, minimum, maxFeasible, start, end, landingTiles);
+    enforceStartRowLanding(coords, profile, minimum, maxFeasible, start);
+    enforceTurnLandings(coords, profile, minimum, maxFeasible);
+    enforceFlatJoinerLandings(coords, profile, minimum, maxFeasible, flatJoiners);
+    enforcePathStepLimits(profile, maxFeasible, start, end);
   }
 
   function endpointLandingTiles(length: number, start: number, end: number): number {
@@ -1163,10 +1496,51 @@ namespace RctaiBuilder {
         continue;
       }
 
-      const landingZ = profile[index] ?? RctaiBuilder.DEFAULT_Z;
+      const landingZ = sharedLandingZ(profile, minimum, maxFeasible, index, index + 1);
+      if (landingZ === null) {
+        continue;
+      }
       const afterTurnIndex = index + 1;
-      if ((minimum[afterTurnIndex] ?? landingZ) <= landingZ && (maxFeasible[afterTurnIndex] ?? landingZ) >= landingZ) {
-        profile[afterTurnIndex] = landingZ;
+      profile[index] = landingZ;
+      profile[afterTurnIndex] = landingZ;
+    }
+  }
+
+  function enforceFlatJoinerLandings(
+    coords: RctaiBuilder.Coord[],
+    profile: number[],
+    minimum: number[],
+    maxFeasible: number[],
+    flatJoiners: ReadonlySet<string>
+  ): void {
+    for (let pass = 0; pass < coords.length; pass += 1) {
+      let changed = false;
+      for (let index = 0; index < coords.length; index += 1) {
+        if (!isFlatJoiner(coords, index, flatJoiners)) {
+          continue;
+        }
+        for (const neighborIndex of [index - 1, index + 1]) {
+          if (neighborIndex < 0 || neighborIndex >= coords.length) {
+            continue;
+          }
+          if (isFlatJoiner(coords, neighborIndex, flatJoiners)) {
+            const landingZ = sharedLandingZ(profile, minimum, maxFeasible, index, neighborIndex);
+            if (landingZ !== null) {
+              changed = setProfileHeight(profile, index, landingZ) || changed;
+              changed = setProfileHeight(profile, neighborIndex, landingZ) || changed;
+            }
+            continue;
+          }
+
+          const joinerZ = profile[index] ?? RctaiBuilder.DEFAULT_Z;
+          const neighborZ = profile[neighborIndex] ?? joinerZ;
+          if (neighborZ > joinerZ && setProfileHeightIfFeasible(profile, minimum, maxFeasible, index, neighborZ)) {
+            changed = true;
+          }
+        }
+      }
+      if (!changed) {
+        return;
       }
     }
   }
@@ -1200,10 +1574,48 @@ namespace RctaiBuilder {
     maxFeasible: number[],
     index: number,
     z: number
-  ): void {
+  ): boolean {
     if ((minimum[index] ?? z) <= z && (maxFeasible[index] ?? z) >= z) {
+      if (profile[index] === z) {
+        return false;
+      }
       profile[index] = z;
+      return true;
     }
+    return false;
+  }
+
+  function setProfileHeight(profile: number[], index: number, z: number): boolean {
+    if (profile[index] === z) {
+      return false;
+    }
+    profile[index] = z;
+    return true;
+  }
+
+  function sharedLandingZ(
+    profile: number[],
+    minimum: number[],
+    maxFeasible: number[],
+    leftIndex: number,
+    rightIndex: number
+  ): number | null {
+    const lower = Math.max(
+      minimum[leftIndex] ?? RctaiBuilder.DEFAULT_Z,
+      minimum[rightIndex] ?? RctaiBuilder.DEFAULT_Z
+    );
+    const upper = Math.min(
+      maxFeasible[leftIndex] ?? MAX_BUILD_Z,
+      maxFeasible[rightIndex] ?? MAX_BUILD_Z
+    );
+    if (lower > upper) {
+      return null;
+    }
+    const preferred = Math.max(
+      profile[leftIndex] ?? lower,
+      profile[rightIndex] ?? lower
+    );
+    return clampBuildZ(Math.max(lower, Math.min(upper, preferred)));
   }
 
   function enforcePathStepLimits(profile: number[], maxFeasible: number[], start: number, end: number): void {
@@ -1307,9 +1719,14 @@ namespace RctaiBuilder {
   function pathSlopeForTile(
     coords: RctaiBuilder.Coord[],
     profile: number[],
-    index: number
+    index: number,
+    flatJoiners: ReadonlySet<string> = new Set()
   ): Pick<PathTileBuildSpec, "slopeType" | "slopeDirection"> {
     const coord = coords[index];
+    if (isFlatJoiner(coords, index, flatJoiners) || isPathTurnTile(coords, index)) {
+      return { slopeType: PATH_FLAT, slopeDirection: 0 };
+    }
+
     const z = profile[index];
     const next = coords[index + 1];
     const nextZ = profile[index + 1];
@@ -1324,6 +1741,25 @@ namespace RctaiBuilder {
     }
 
     return { slopeType: PATH_FLAT, slopeDirection: 0 };
+  }
+
+  function isFlatJoiner(
+    coords: RctaiBuilder.Coord[],
+    index: number,
+    flatJoiners: ReadonlySet<string>
+  ): boolean {
+    const coord = coords[index];
+    return coord !== undefined && flatJoiners.has(pathCoordKey(coord));
+  }
+
+  function isPathTurnTile(coords: RctaiBuilder.Coord[], index: number): boolean {
+    const previous = coords[index - 1];
+    const current = coords[index];
+    const next = coords[index + 1];
+    if (previous === undefined || current === undefined || next === undefined) {
+      return false;
+    }
+    return directionBetweenTiles(previous, current) !== directionBetweenTiles(current, next);
   }
 
   function pathTileBuildSpecKey(spec: PathTileBuildSpec): string {

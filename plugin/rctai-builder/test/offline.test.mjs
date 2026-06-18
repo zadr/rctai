@@ -256,3 +256,112 @@ test("offline build smooths terrain-induced path z valleys", () => {
     );
   }
 });
+
+test("offline build keeps raised path junctions flat and walkable", () => {
+  class RaisedJunctionAdapter extends RctaiBuilder.FakeGameAdapter {
+    getSurfaceZ(x, y) {
+      if (x === 16 && y === 30) {
+        return 224;
+      }
+      return null;
+    }
+  }
+
+  const mainPath = Array.from({ length: 11 }, (_value, index) => ({ x: 10 + index, y: 30 }));
+  const branchPath = Array.from({ length: 6 }, (_value, index) => ({ x: 15, y: 30 + index }));
+  const plan = {
+    schemaVersion: 1,
+    park: {
+      name: "path junction ramp",
+      size: { width: 64, height: 64 },
+      entrance: { x: 10, y: 30, z: 208, direction: 2 }
+    },
+    rides: [],
+    paths: [
+      {
+        from: "entrance",
+        to: "main-path",
+        waypoints: mainPath
+      },
+      {
+        from: "branch",
+        to: "branch-end",
+        waypoints: branchPath
+      }
+    ],
+    scenery: []
+  };
+
+  const adapter = new RaisedJunctionAdapter();
+  const controller = new RctaiBuilder.BuildController(adapter);
+  controller.enqueueBuild(plan);
+  const status = controller.runUntilIdle();
+
+  assert.equal(status.failedActions, 0);
+
+  const pathTiles = adapter.actions
+    .filter((action) => action.action === "footpathplace")
+    .map((action) => footpathActionTile(action));
+  const tilesByCoord = new Map(pathTiles.map((tile) => [`${tile.x},${tile.y}`, tile]));
+  const junction = tilesByCoord.get("15,30");
+
+  assert.equal(junction?.slopeType, 0);
+  assertPlanPathIsWalkable(mainPath, tilesByCoord);
+  assertPlanPathIsWalkable(branchPath, tilesByCoord);
+});
+
+function footpathActionTile(action) {
+  return {
+    x: action.args.x / 32,
+    y: action.args.y / 32,
+    z: action.args.z,
+    slopeType: action.args.slopeType,
+    slopeDirection: action.args.slopeDirection
+  };
+}
+
+function assertPlanPathIsWalkable(coords, tilesByCoord) {
+  for (let index = 0; index < coords.length - 1; index += 1) {
+    const fromCoord = coords[index];
+    const toCoord = coords[index + 1];
+    const from = tilesByCoord.get(`${fromCoord.x},${fromCoord.y}`);
+    const to = tilesByCoord.get(`${toCoord.x},${toCoord.y}`);
+    assert.ok(from, `missing path tile ${fromCoord.x},${fromCoord.y}`);
+    assert.ok(to, `missing path tile ${toCoord.x},${toCoord.y}`);
+    const direction = footpathDirection(fromCoord, toCoord);
+    assert.equal(
+      footpathEdgeZ(from, direction),
+      footpathEdgeZ(to, normalizeTestDirection(direction + 2)),
+      `unwalkable path edge ${fromCoord.x},${fromCoord.y} -> ${toCoord.x},${toCoord.y}`
+    );
+  }
+}
+
+function footpathEdgeZ(tile, direction) {
+  if (tile.slopeType !== 1) {
+    return tile.z;
+  }
+  return normalizeTestDirection(tile.slopeDirection) === normalizeTestDirection(direction) ? tile.z + 16 : tile.z;
+}
+
+function footpathDirection(from, to) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (dx === -1 && dy === 0) {
+    return 0;
+  }
+  if (dx === 0 && dy === 1) {
+    return 1;
+  }
+  if (dx === 1 && dy === 0) {
+    return 2;
+  }
+  if (dx === 0 && dy === -1) {
+    return 3;
+  }
+  throw new Error(`non-adjacent test path coords: ${from.x},${from.y} -> ${to.x},${to.y}`);
+}
+
+function normalizeTestDirection(direction) {
+  return ((direction % 4) + 4) % 4;
+}
