@@ -93,6 +93,7 @@ const issues = [
   ...validatePathGraph(plan),
   ...validatePhysicalPathNetwork(plan),
   ...validatePaintedTrackPieces(plan.rides ?? []),
+  ...validateTrackPositionCollisions(plan.rides ?? []),
   ...validateClosedTrackCircuits(plan.rides ?? [])
 ];
 
@@ -215,6 +216,36 @@ function validatePaintedTrackPieces(rides) {
       if (isUnpaintedTrackPiece(ride.rideType, segment.type)) {
         issues.push(`${ride.id} ${ride.rideType} segment ${index} uses unpainted track type ${segment.type}`);
       }
+    }
+  }
+  return issues;
+}
+
+function validateTrackPositionCollisions(rides) {
+  const issues = [];
+  const seen = new Map();
+  for (const ride of rides) {
+    if (!Array.isArray(ride.track) || ride.track.length === 0) {
+      continue;
+    }
+    let cursor = absoluteTrackStartCursor(ride);
+    for (let index = 0; index < ride.track.length; index += 1) {
+      const segment = ride.track[index];
+      const key = trackPositionKey(cursor);
+      const previous = seen.get(key);
+      if (previous !== undefined) {
+        issues.push(
+          `${ride.id} track segment ${index} (${segment.type}) intersects ${previous.rideId} segment ${previous.index} (${previous.type}) at ${key}`
+        );
+      } else {
+        seen.set(key, { rideId: ride.id, index, type: segment.type });
+      }
+
+      const meta = TRACK_META[segment.type];
+      if (meta === undefined) {
+        break;
+      }
+      cursor = advance(cursor, meta);
     }
   }
   return issues;
@@ -392,6 +423,21 @@ function trackStartCursor(ride) {
     z: first.z ?? BASE_Z,
     direction: normalizeDirection(first.direction ?? ride.rotation ?? 0)
   };
+}
+
+function absoluteTrackStartCursor(ride) {
+  const first = ride.track[0] ?? {};
+  const position = ride.position ?? { x: 0, y: 0 };
+  return {
+    x: position.x + (first.x ?? 0),
+    y: position.y + (first.y ?? 0),
+    z: first.z ?? BASE_Z,
+    direction: normalizeDirection(first.direction ?? ride.rotation ?? 0)
+  };
+}
+
+function trackPositionKey(cursor) {
+  return `${cursor.x},${cursor.y},${cursor.z}`;
 }
 
 function simulateTrack(track, start) {

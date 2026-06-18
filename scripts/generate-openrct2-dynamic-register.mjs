@@ -1249,7 +1249,7 @@ function placeRides(rides) {
 }
 
 function chooseNonCollidingPosition(ride, basePosition, occupiedTrackKeys) {
-  if (!requiresClosedTrackCircuit({ ...ride, position: basePosition })) {
+  if (trackPositionKeysForRideAt(ride, basePosition).length === 0) {
     return basePosition;
   }
 
@@ -1261,7 +1261,7 @@ function chooseNonCollidingPosition(ride, basePosition, occupiedTrackKeys) {
       continue;
     }
     seen.add(key);
-    const collisions = trackKeysForRideAt(ride, candidate).filter((trackKey) => occupiedTrackKeys.has(trackKey));
+    const collisions = trackPositionKeysForRideAt(ride, candidate).filter((trackKey) => occupiedTrackKeys.has(trackKey));
     if (collisions.length === 0) {
       return candidate;
     }
@@ -1288,22 +1288,30 @@ function* placementCandidates(basePosition, footprint, seed) {
 }
 
 function reserveTrackKeys(ride, occupiedTrackKeys) {
-  for (const trackKey of trackKeysForRideAt(ride, ride.position)) {
+  for (const trackKey of trackPositionKeysForRideAt(ride, ride.position)) {
     occupiedTrackKeys.set(trackKey, ride.id);
   }
 }
 
-function trackKeysForRideAt(ride, position) {
-  if (!requiresClosedTrackCircuit({ ...ride, position })) {
+function trackPositionKeysForRideAt(ride, position) {
+  if (!Array.isArray(ride.track) || ride.track.length === 0) {
     return [];
   }
   const keys = [];
   let cursor = absoluteTrackStartCursor({ ...ride, position });
   for (const segment of ride.track) {
-    keys.push(`${cursor.x},${cursor.y},${cursor.z},d${cursor.direction},t${segment.type}`);
-    cursor = advance(cursor, TRACK_META[segment.type]);
+    keys.push(trackPositionKey(cursor));
+    const meta = TRACK_META[segment.type];
+    if (meta === undefined) {
+      break;
+    }
+    cursor = advance(cursor, meta);
   }
   return keys;
+}
+
+function trackPositionKey(cursor) {
+  return `${cursor.x},${cursor.y},${cursor.z}`;
 }
 
 function clusterRides(rides) {
@@ -1615,7 +1623,7 @@ function validateGeneratedPlan(generated) {
     ...validatePathGraph(generated),
     ...validatePhysicalPathNetwork(generated),
     ...validatePaintedTrackPieces(generated.rides),
-    ...validateGeneratedTrackKeyCollisions(generated.rides),
+    ...validateGeneratedTrackPositionCollisions(generated.rides),
     ...validateClosedTrackCircuits(generated.rides)
   ];
 
@@ -1636,26 +1644,30 @@ function validatePaintedTrackPieces(rides) {
   return issues;
 }
 
-function validateGeneratedTrackKeyCollisions(rides) {
+function validateGeneratedTrackPositionCollisions(rides) {
   const issues = [];
   const seen = new Map();
   for (const ride of rides ?? []) {
-    if (!requiresClosedTrackCircuit(ride)) {
+    if (!Array.isArray(ride.track) || ride.track.length === 0) {
       continue;
     }
     let cursor = absoluteTrackStartCursor(ride);
     for (let index = 0; index < ride.track.length; index += 1) {
       const segment = ride.track[index];
-      const key = `${cursor.x},${cursor.y},${cursor.z},d${cursor.direction},t${segment.type}`;
+      const key = trackPositionKey(cursor);
       const previous = seen.get(key);
-      if (previous !== undefined && previous.rideId !== ride.id) {
+      if (previous !== undefined) {
         issues.push(
-          `${ride.id} track segment ${index} collides with ${previous.rideId} segment ${previous.index} at ${key}`
+          `${ride.id} track segment ${index} (${segment.type}) intersects ${previous.rideId} segment ${previous.index} (${previous.type}) at ${key}`
         );
       } else {
-        seen.set(key, { rideId: ride.id, index });
+        seen.set(key, { rideId: ride.id, index, type: segment.type });
       }
-      cursor = advance(cursor, TRACK_META[segment.type]);
+      const meta = TRACK_META[segment.type];
+      if (meta === undefined) {
+        break;
+      }
+      cursor = advance(cursor, meta);
     }
   }
   return issues;
@@ -1663,12 +1675,10 @@ function validateGeneratedTrackKeyCollisions(rides) {
 
 function absoluteTrackStartCursor(ride) {
   const first = ride.track[0] ?? {};
-  if (first.type !== BEGIN_STATION) {
-    throw new Error(`${ride.id} generated circuit must start with begin station`);
-  }
+  const position = ride.position ?? { x: 0, y: 0 };
   return {
-    x: ride.position.x + (first.x ?? 0),
-    y: ride.position.y + (first.y ?? 0),
+    x: position.x + (first.x ?? 0),
+    y: position.y + (first.y ?? 0),
     z: first.z ?? BASE_Z,
     direction: normalizeDirection(first.direction ?? ride.rotation ?? 0)
   };
