@@ -17,22 +17,62 @@ const END_STATION = 1;
 const BEGIN_STATION = 2;
 const MIDDLE_STATION = 3;
 const UP_25 = 4;
+const UP_60 = 5;
 const DOWN_25 = 10;
+const DOWN_60 = 11;
 const FLAT_TO_UP_25 = 6;
+const UP_25_TO_UP_60 = 7;
+const UP_60_TO_UP_25 = 8;
 const UP_25_TO_FLAT = 9;
 const FLAT_TO_DOWN_25 = 12;
+const DOWN_25_TO_DOWN_60 = 13;
+const DOWN_60_TO_DOWN_25 = 14;
 const DOWN_25_TO_FLAT = 15;
 const LEFT_TURN_5 = 16;
 const RIGHT_TURN_5 = 17;
 const BANKED_LEFT_TURN_5 = 22;
 const BANKED_RIGHT_TURN_5 = 23;
+const S_BEND_LEFT = 38;
+const S_BEND_RIGHT = 39;
 const LEFT_TURN_3 = 42;
 const RIGHT_TURN_3 = 43;
 const LEFT_LOOP = 40;
 const RIGHT_LOOP = 41;
+const LEFT_TWIST_DOWN_TO_UP = 52;
+const RIGHT_TWIST_DOWN_TO_UP = 53;
+const LEFT_TWIST_UP_TO_DOWN = 54;
+const RIGHT_TWIST_UP_TO_DOWN = 55;
+const LEFT_CORKSCREW_UP = 58;
+const RIGHT_CORKSCREW_UP = 59;
+const LEFT_CORKSCREW_DOWN = 60;
+const RIGHT_CORKSCREW_DOWN = 61;
+const LEFT_QUARTER_BANKED_HELIX_UP = 102;
+const RIGHT_QUARTER_BANKED_HELIX_UP = 103;
+const LEFT_QUARTER_BANKED_HELIX_DOWN = 104;
+const RIGHT_QUARTER_BANKED_HELIX_DOWN = 105;
+const LEFT_QUARTER_HELIX_UP = 106;
+const RIGHT_QUARTER_HELIX_UP = 107;
+const LEFT_QUARTER_HELIX_DOWN = 108;
+const RIGHT_QUARTER_HELIX_DOWN = 109;
 const BRAKES = 99;
 const BOOSTER = 100;
+const LEFT_BARREL_ROLL_UP_TO_DOWN = 174;
+const RIGHT_BARREL_ROLL_UP_TO_DOWN = 175;
+const LEFT_BARREL_ROLL_DOWN_TO_UP = 176;
+const RIGHT_BARREL_ROLL_DOWN_TO_UP = 177;
 const BLOCK_BRAKES = 216;
+const LEFT_LARGE_CORKSCREW_UP = 267;
+const RIGHT_LARGE_CORKSCREW_UP = 268;
+const LEFT_LARGE_CORKSCREW_DOWN = 269;
+const RIGHT_LARGE_CORKSCREW_DOWN = 270;
+const LEFT_ZERO_G_ROLL_UP = 275;
+const RIGHT_ZERO_G_ROLL_UP = 276;
+const LEFT_ZERO_G_ROLL_DOWN = 277;
+const RIGHT_ZERO_G_ROLL_DOWN = 278;
+const LEFT_LARGE_ZERO_G_ROLL_UP = 279;
+const RIGHT_LARGE_ZERO_G_ROLL_UP = 280;
+const LEFT_LARGE_ZERO_G_ROLL_DOWN = 281;
+const RIGHT_LARGE_ZERO_G_ROLL_DOWN = 282;
 const BRAKE_TRACK_TYPES = new Set([BRAKES, BLOCK_BRAKES]);
 const RIDE_TYPES_WITHOUT_PAINTED_BRAKES = new Set(["miniature_railway", "suspended_monorail"]);
 
@@ -103,22 +143,62 @@ const TRACK_META = {
   [BEGIN_STATION]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
   [MIDDLE_STATION]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
   [UP_25]: { endX: 0, endY: 0, beginZ: 0, endZ: 16, beginDirection: 0, endDirection: 0 },
+  [UP_60]: { endX: 0, endY: 0, beginZ: 0, endZ: 64, beginDirection: 0, endDirection: 0 },
   [DOWN_25]: { endX: 0, endY: 0, beginZ: 16, endZ: 0, beginDirection: 0, endDirection: 0 },
+  [DOWN_60]: { endX: 0, endY: 0, beginZ: 64, endZ: 0, beginDirection: 0, endDirection: 0 },
   [FLAT_TO_UP_25]: { endX: 0, endY: 0, beginZ: 0, endZ: 8, beginDirection: 0, endDirection: 0 },
+  [UP_25_TO_UP_60]: { endX: 0, endY: 0, beginZ: 0, endZ: 32, beginDirection: 0, endDirection: 0 },
+  [UP_60_TO_UP_25]: { endX: 0, endY: 0, beginZ: 0, endZ: 32, beginDirection: 0, endDirection: 0 },
   [UP_25_TO_FLAT]: { endX: 0, endY: 0, beginZ: 0, endZ: 8, beginDirection: 0, endDirection: 0 },
   [FLAT_TO_DOWN_25]: { endX: 0, endY: 0, beginZ: 8, endZ: 0, beginDirection: 0, endDirection: 0 },
+  [DOWN_25_TO_DOWN_60]: { endX: 0, endY: 0, beginZ: 32, endZ: 0, beginDirection: 0, endDirection: 0 },
+  [DOWN_60_TO_DOWN_25]: { endX: 0, endY: 0, beginZ: 32, endZ: 0, beginDirection: 0, endDirection: 0 },
   [DOWN_25_TO_FLAT]: { endX: 0, endY: 0, beginZ: 8, endZ: 0, beginDirection: 0, endDirection: 0 },
   [LEFT_TURN_5]: { endX: -64, endY: -64, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 3 },
   [RIGHT_TURN_5]: { endX: -64, endY: 64, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 1 },
   [BANKED_LEFT_TURN_5]: { endX: -64, endY: -64, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 3 },
   [BANKED_RIGHT_TURN_5]: { endX: -64, endY: 64, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 1 },
+  [S_BEND_LEFT]: { endX: -64, endY: -32, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
+  [S_BEND_RIGHT]: { endX: -64, endY: 32, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
   [LEFT_TURN_3]: { endX: -32, endY: -32, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 3 },
   [RIGHT_TURN_3]: { endX: -32, endY: 32, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 1 },
   [LEFT_LOOP]: { endX: -32, endY: -32, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
   [RIGHT_LOOP]: { endX: -32, endY: 32, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
+  [LEFT_TWIST_DOWN_TO_UP]: { endX: -64, endY: 0, beginZ: 0, endZ: 16, beginDirection: 0, endDirection: 0 },
+  [RIGHT_TWIST_DOWN_TO_UP]: { endX: -64, endY: 0, beginZ: 0, endZ: 16, beginDirection: 0, endDirection: 0 },
+  [LEFT_TWIST_UP_TO_DOWN]: { endX: -64, endY: 0, beginZ: 0, endZ: -16, beginDirection: 0, endDirection: 0 },
+  [RIGHT_TWIST_UP_TO_DOWN]: { endX: -64, endY: 0, beginZ: 0, endZ: -16, beginDirection: 0, endDirection: 0 },
+  [LEFT_CORKSCREW_UP]: { endX: -32, endY: -32, beginZ: 0, endZ: 80, beginDirection: 0, endDirection: 3 },
+  [RIGHT_CORKSCREW_UP]: { endX: -32, endY: 32, beginZ: 0, endZ: 80, beginDirection: 0, endDirection: 1 },
+  [LEFT_CORKSCREW_DOWN]: { endX: -32, endY: -32, beginZ: 0, endZ: -80, beginDirection: 0, endDirection: 3 },
+  [RIGHT_CORKSCREW_DOWN]: { endX: -32, endY: 32, beginZ: 0, endZ: -80, beginDirection: 0, endDirection: 1 },
   [BRAKES]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
   [BOOSTER]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
-  [BLOCK_BRAKES]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 }
+  [LEFT_QUARTER_BANKED_HELIX_UP]: { endX: -64, endY: -64, beginZ: 0, endZ: 16, beginDirection: 0, endDirection: 3 },
+  [RIGHT_QUARTER_BANKED_HELIX_UP]: { endX: -64, endY: 64, beginZ: 0, endZ: 16, beginDirection: 0, endDirection: 1 },
+  [LEFT_QUARTER_BANKED_HELIX_DOWN]: { endX: -64, endY: -64, beginZ: 16, endZ: 0, beginDirection: 0, endDirection: 3 },
+  [RIGHT_QUARTER_BANKED_HELIX_DOWN]: { endX: -64, endY: 64, beginZ: 16, endZ: 0, beginDirection: 0, endDirection: 1 },
+  [LEFT_QUARTER_HELIX_UP]: { endX: -64, endY: -64, beginZ: 0, endZ: 16, beginDirection: 0, endDirection: 3 },
+  [RIGHT_QUARTER_HELIX_UP]: { endX: -64, endY: 64, beginZ: 0, endZ: 16, beginDirection: 0, endDirection: 1 },
+  [LEFT_QUARTER_HELIX_DOWN]: { endX: -64, endY: -64, beginZ: 16, endZ: 0, beginDirection: 0, endDirection: 3 },
+  [RIGHT_QUARTER_HELIX_DOWN]: { endX: -64, endY: 64, beginZ: 16, endZ: 0, beginDirection: 0, endDirection: 1 },
+  [LEFT_BARREL_ROLL_UP_TO_DOWN]: { endX: -64, endY: 0, beginZ: 0, endZ: 32, beginDirection: 0, endDirection: 0 },
+  [RIGHT_BARREL_ROLL_UP_TO_DOWN]: { endX: -64, endY: 0, beginZ: 0, endZ: 32, beginDirection: 0, endDirection: 0 },
+  [LEFT_BARREL_ROLL_DOWN_TO_UP]: { endX: -64, endY: 0, beginZ: 0, endZ: -32, beginDirection: 0, endDirection: 0 },
+  [RIGHT_BARREL_ROLL_DOWN_TO_UP]: { endX: -64, endY: 0, beginZ: 0, endZ: -32, beginDirection: 0, endDirection: 0 },
+  [BLOCK_BRAKES]: { endX: 0, endY: 0, beginZ: 0, endZ: 0, beginDirection: 0, endDirection: 0 },
+  [LEFT_LARGE_CORKSCREW_UP]: { endX: -64, endY: -64, beginZ: 0, endZ: 112, beginDirection: 0, endDirection: 3 },
+  [RIGHT_LARGE_CORKSCREW_UP]: { endX: -64, endY: 64, beginZ: 0, endZ: 112, beginDirection: 0, endDirection: 1 },
+  [LEFT_LARGE_CORKSCREW_DOWN]: { endX: -64, endY: -64, beginZ: 0, endZ: -112, beginDirection: 0, endDirection: 3 },
+  [RIGHT_LARGE_CORKSCREW_DOWN]: { endX: -64, endY: 64, beginZ: 0, endZ: -112, beginDirection: 0, endDirection: 1 },
+  [LEFT_ZERO_G_ROLL_UP]: { endX: -64, endY: 0, beginZ: 0, endZ: 56, beginDirection: 0, endDirection: 0 },
+  [RIGHT_ZERO_G_ROLL_UP]: { endX: -64, endY: 0, beginZ: 0, endZ: 56, beginDirection: 0, endDirection: 0 },
+  [LEFT_ZERO_G_ROLL_DOWN]: { endX: -64, endY: 0, beginZ: 0, endZ: -56, beginDirection: 0, endDirection: 0 },
+  [RIGHT_ZERO_G_ROLL_DOWN]: { endX: -64, endY: 0, beginZ: 0, endZ: -56, beginDirection: 0, endDirection: 0 },
+  [LEFT_LARGE_ZERO_G_ROLL_UP]: { endX: -96, endY: 0, beginZ: 0, endZ: 152, beginDirection: 0, endDirection: 0 },
+  [RIGHT_LARGE_ZERO_G_ROLL_UP]: { endX: -96, endY: 0, beginZ: 0, endZ: 152, beginDirection: 0, endDirection: 0 },
+  [LEFT_LARGE_ZERO_G_ROLL_DOWN]: { endX: -96, endY: 0, beginZ: 0, endZ: -152, beginDirection: 0, endDirection: 0 },
+  [RIGHT_LARGE_ZERO_G_ROLL_DOWN]: { endX: -96, endY: 0, beginZ: 0, endZ: -152, beginDirection: 0, endDirection: 0 }
 };
 
 const plan = readJson(path.resolve(repoRoot, inputPath));
@@ -456,6 +536,7 @@ function buildDynamicTrack({ ride, visualRideType, axes, seed, sideA, sideB, sta
     ...station,
     ...buildConnectedSide(frontSide, "front", {
       ride,
+      visualRideType,
       axes,
       seed: sideSeed,
       loopSeed: sideSeed,
@@ -468,6 +549,7 @@ function buildDynamicTrack({ ride, visualRideType, axes, seed, sideA, sideB, sta
     { type: turnType },
     ...buildConnectedSide(shortSide, "side-a", {
       ride,
+      visualRideType,
       axes,
       seed: sideSeed + 11,
       loopSeed: sideSeed,
@@ -480,6 +562,7 @@ function buildDynamicTrack({ ride, visualRideType, axes, seed, sideA, sideB, sta
     { type: turnType },
     ...buildConnectedSide(backSide, "back", {
       ride,
+      visualRideType,
       axes,
       seed: sideSeed + 23,
       loopSeed: sideSeed,
@@ -510,9 +593,15 @@ function buildStation(length) {
   return [{ type: BEGIN_STATION }, ...repeat(MIDDLE_STATION, length - 2), { type: END_STATION }];
 }
 
-function buildLiftDrop(axes, hillHeight, budget) {
+function buildLiftDrop(ride, axes, hillHeight, budget, seed) {
   if (budget < hillHeight * 2 + 5 || axes.size < 0.25) {
     return repeat(FLAT, Math.max(1, budget));
+  }
+  if (canUseSteepDrop(ride) && axes.risk + axes.adventure * 0.55 + seeded(seed, 61) * 0.4 > 0.86) {
+    const steepDrop = buildSteepLiftDrop(hillHeight, budget);
+    if (steepDrop.length > 0) {
+      return steepDrop;
+    }
   }
   return [
     { type: FLAT_TO_UP_25, chainLift: true },
@@ -521,6 +610,26 @@ function buildLiftDrop(axes, hillHeight, budget) {
     ...repeat(FLAT, Math.max(1, Math.min(3, budget - hillHeight * 2 - 4))),
     { type: FLAT_TO_DOWN_25 },
     ...repeat(DOWN_25, hillHeight),
+    { type: DOWN_25_TO_FLAT }
+  ];
+}
+
+function buildSteepLiftDrop(hillHeight, budget) {
+  const steepSegments = budget >= 22 && hillHeight >= 4 ? 2 : 1;
+  const climbSegments = 4 + steepSegments * 4;
+  const required = climbSegments + steepSegments + 8;
+  if (budget < required) {
+    return [];
+  }
+  return [
+    { type: FLAT_TO_UP_25, chainLift: true },
+    ...repeat(UP_25, climbSegments).map((segment) => ({ ...segment, chainLift: true })),
+    { type: UP_25_TO_FLAT, chainLift: true },
+    ...repeat(FLAT, Math.max(1, Math.min(3, budget - required))),
+    { type: FLAT_TO_DOWN_25 },
+    { type: DOWN_25_TO_DOWN_60 },
+    ...repeat(DOWN_60, steepSegments),
+    { type: DOWN_60_TO_DOWN_25 },
     { type: DOWN_25_TO_FLAT }
   ];
 }
@@ -599,9 +708,14 @@ function connectedSideCandidates(length, role, { ride, visualRideType, axes, see
   const candidates = [];
   let reservedAdvance = 0;
   if (role === "front") {
-    const liftDrop = buildLiftDrop(axes, hillHeight, 10 + hillHeight * 2);
+    const liftDrop = buildLiftDrop(ride, axes, hillHeight, Math.min(length, 12 + hillHeight * 2), seed);
     candidates.push(liftDrop);
     reservedAdvance += Math.max(0, forwardAdvance(liftDrop));
+  }
+
+  for (const feature of buildPriorityTrackFeatureCandidates(role, { ride, visualRideType, axes, seed, relation })) {
+    candidates.push(feature);
+    reservedAdvance += Math.max(0, forwardAdvance(feature));
   }
 
   const requestedLoopPairs = loopPairsForRole(loopSeed, axes, relation, role, allowLoop);
@@ -612,6 +726,10 @@ function connectedSideCandidates(length, role, { ride, visualRideType, axes, see
       candidates.push(loopPortal);
       reservedAdvance += Math.max(0, forwardAdvance(loopPortal));
     }
+  }
+
+  for (const feature of buildTrackFeatureCandidates(role, { ride, visualRideType, axes, seed, relation })) {
+    candidates.push(feature);
   }
 
   if (role !== "final" && Math.max(relation.clusterSize ?? 1, relation.evolutionCount ?? 1) > 1) {
@@ -627,6 +745,55 @@ function connectedSideCandidates(length, role, { ride, visualRideType, axes, see
   }
 
   return candidates.filter((candidate) => isStraightPreserving(candidate));
+}
+
+function buildPriorityTrackFeatureCandidates(role, { ride, visualRideType, axes, seed, relation }) {
+  if (!shouldPrioritizeCorkscrew(role, { ride, visualRideType, axes, seed, relation })) {
+    return [];
+  }
+  return [buildCorkscrewBlock(seed, false)];
+}
+
+function buildTrackFeatureCandidates(role, { ride, visualRideType, axes, seed, relation }) {
+  const candidates = [];
+  const relatedCount = Math.max(relation.clusterSize ?? 1, relation.evolutionCount ?? 1);
+  const featurePressure = axes.adventure * 0.7 + axes.risk * 0.55 + Math.min(0.35, Math.log2(relatedCount) / 5);
+
+  if (canUseTrackGroup(ride, "sBend") && role !== "final" && featurePressure + seeded(seed, 401) > 0.82) {
+    candidates.push(buildRealSBend(seeded(seed, 402) > 0.5));
+  }
+
+  if (role !== "front" && canUseTwist(ride) && featurePressure + seeded(seed, 411) > 1.02) {
+    candidates.push(buildInlineTwist(seed));
+  }
+
+  if (
+    (role === "front" || role === "back") &&
+    canUseCorkscrew(ride) &&
+    !shouldPrioritizeCorkscrew(role, { ride, visualRideType, axes, seed, relation }) &&
+    featurePressure + seeded(seed, 421) > 1.04
+  ) {
+    candidates.push(buildCorkscrewBlock(seed, false));
+  }
+
+  if ((role === "side-a" || role === "back") && canUseHelix(ride) && axes.size + seeded(seed, 451) > 0.75) {
+    candidates.push(buildHelixFeature(seed, ride));
+  }
+
+  return candidates;
+}
+
+function shouldPrioritizeCorkscrew(role, { ride, visualRideType, axes, seed, relation }) {
+  if (!(role === "front" || role === "back") || !canUseCorkscrew(ride)) {
+    return false;
+  }
+
+  const relatedCount = Math.max(relation.clusterSize ?? 1, relation.evolutionCount ?? 1);
+  const signatureType = visualRideType ?? ride.rideType;
+  const signatureCorkscrewRide = ["corkscrew_rc", "twister_rc", "hyper_twister"].includes(signatureType);
+  const pressure = axes.adventure * 0.75 + axes.risk * 0.55 + Math.min(0.35, Math.log2(relatedCount) / 5);
+  const threshold = signatureCorkscrewRide ? 0.72 : 1.02;
+  return pressure + seeded(seed, 421) > threshold;
 }
 
 function loopPairsForRole(seed, axes, relation, role, allowLoop) {
@@ -760,6 +927,66 @@ function loopRoleSalt(role) {
 
 function buildVerticalLoop(type) {
   return [{ type: FLAT_TO_UP_25 }, { type }, { type: DOWN_25_TO_FLAT }];
+}
+
+function buildRealSBend(leftFirst) {
+  return [{ type: leftFirst ? S_BEND_LEFT : S_BEND_RIGHT }, { type: leftFirst ? S_BEND_RIGHT : S_BEND_LEFT }];
+}
+
+function buildInlineTwist(seed) {
+  const up = seeded(seed, 510) > 0.5 ? LEFT_TWIST_DOWN_TO_UP : RIGHT_TWIST_DOWN_TO_UP;
+  const down = seeded(seed, 511) > 0.5 ? LEFT_TWIST_UP_TO_DOWN : RIGHT_TWIST_UP_TO_DOWN;
+  return seeded(seed, 512) > 0.35 ? [{ type: up }, { type: down }] : [{ type: down }, { type: up }];
+}
+
+function buildCorkscrewBlock(seed, large) {
+  const patterns = large
+    ? [
+        [LEFT_LARGE_CORKSCREW_UP, RIGHT_LARGE_CORKSCREW_UP, RIGHT_LARGE_CORKSCREW_DOWN, LEFT_LARGE_CORKSCREW_DOWN],
+        [RIGHT_LARGE_CORKSCREW_UP, LEFT_LARGE_CORKSCREW_UP, LEFT_LARGE_CORKSCREW_DOWN, RIGHT_LARGE_CORKSCREW_DOWN],
+        [LEFT_LARGE_CORKSCREW_UP, LEFT_LARGE_CORKSCREW_DOWN, RIGHT_LARGE_CORKSCREW_UP, RIGHT_LARGE_CORKSCREW_DOWN],
+        [RIGHT_LARGE_CORKSCREW_UP, RIGHT_LARGE_CORKSCREW_DOWN, LEFT_LARGE_CORKSCREW_UP, LEFT_LARGE_CORKSCREW_DOWN]
+      ]
+    : [
+        [LEFT_CORKSCREW_UP, RIGHT_CORKSCREW_UP, RIGHT_CORKSCREW_DOWN, LEFT_CORKSCREW_DOWN],
+        [RIGHT_CORKSCREW_UP, LEFT_CORKSCREW_UP, LEFT_CORKSCREW_DOWN, RIGHT_CORKSCREW_DOWN],
+        [LEFT_CORKSCREW_UP, LEFT_CORKSCREW_DOWN, RIGHT_CORKSCREW_UP, RIGHT_CORKSCREW_DOWN],
+        [RIGHT_CORKSCREW_UP, RIGHT_CORKSCREW_DOWN, LEFT_CORKSCREW_UP, LEFT_CORKSCREW_DOWN]
+      ];
+  return (patterns[Math.floor(seeded(seed, large ? 521 : 522) * patterns.length)] ?? patterns[0]).map((type) => ({ type }));
+}
+
+function buildHelixFeature(seed, ride) {
+  const banked = canUseAnyTrackFeature(ride, ["helixUpBankedQuarter", "helixDownBankedQuarter"]);
+  const leftFirst = seeded(seed, 541) > 0.5;
+  if (banked) {
+    return leftFirst
+      ? [
+          { type: LEFT_QUARTER_BANKED_HELIX_UP },
+          { type: RIGHT_QUARTER_BANKED_HELIX_DOWN },
+          { type: RIGHT_QUARTER_BANKED_HELIX_UP },
+          { type: LEFT_QUARTER_BANKED_HELIX_DOWN }
+        ]
+      : [
+          { type: RIGHT_QUARTER_BANKED_HELIX_UP },
+          { type: LEFT_QUARTER_BANKED_HELIX_DOWN },
+          { type: LEFT_QUARTER_BANKED_HELIX_UP },
+          { type: RIGHT_QUARTER_BANKED_HELIX_DOWN }
+        ];
+  }
+  return leftFirst
+    ? [
+        { type: LEFT_QUARTER_HELIX_UP },
+        { type: RIGHT_QUARTER_HELIX_DOWN },
+        { type: RIGHT_QUARTER_HELIX_UP },
+        { type: LEFT_QUARTER_HELIX_DOWN }
+      ]
+    : [
+        { type: RIGHT_QUARTER_HELIX_UP },
+        { type: LEFT_QUARTER_HELIX_DOWN },
+        { type: LEFT_QUARTER_HELIX_UP },
+        { type: RIGHT_QUARTER_HELIX_DOWN }
+      ];
 }
 
 function buildClusterPass(ride, length, axes, seed, relation) {
@@ -935,7 +1162,7 @@ function turnTypeFor(family, clockwise) {
 }
 
 function canUseVerticalLoop(ride) {
-  return ride.buildOut?.trackGroups?.includes("verticalLoop") === true || ride.buildOut?.inversions?.includes("verticalLoop") === true;
+  return canUseTrackFeature(ride, "verticalLoop");
 }
 
 function canUseRenderedVerticalLoop(ride, visualRideType) {
@@ -943,6 +1170,51 @@ function canUseRenderedVerticalLoop(ride, visualRideType) {
     canUseVerticalLoop(ride) ||
     ["giga_rc", "looping_rc", "twister_rc", "corkscrew_rc", "stand_up_rc", "inverted_rc"].includes(visualRideType)
   );
+}
+
+function canUseTrackFeature(ride, feature) {
+  return trackFeatureSet(ride).has(feature);
+}
+
+function canUseTrackGroup(ride, group) {
+  return canUseTrackFeature(ride, group);
+}
+
+function canUseAnyTrackFeature(ride, features) {
+  return features.some((feature) => canUseTrackFeature(ride, feature));
+}
+
+function canUseSteepDrop(ride) {
+  return canUseAnyTrackFeature(ride, ["slopeSteepDown", "slopeSteepLong", "slopeVertical", "curveVertical"]);
+}
+
+function canUseTwist(ride) {
+  // Inline twists traverse cleanly but currently fail OpenRCT2's open-ride validation.
+  void ride;
+  return false;
+}
+
+function canUseCorkscrew(ride) {
+  // Corkscrew blocks require additional placement calibration before generated circuits can open reliably.
+  void ride;
+  return false;
+}
+
+function canUseHelix(ride) {
+  // Quarter-helix circuits traverse cleanly but currently fail OpenRCT2's open-ride validation.
+  // Keep them out of generated parks until their placement/opening semantics are calibrated.
+  void ride;
+  return false;
+}
+
+function trackFeatureSet(ride) {
+  return new Set([
+    ...(ride.buildOut?.trackGroups ?? []),
+    ...(ride.buildOut?.inversions ?? []),
+    ...(ride.buildOut?.helices ?? []),
+    ...(ride.buildOut?.steepDrops ?? []),
+    ...(ride.buildOut?.banking ?? [])
+  ]);
 }
 
 function placeRides(rides) {
