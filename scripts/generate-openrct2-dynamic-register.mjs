@@ -1469,167 +1469,76 @@ function clampPosition(position, footprint) {
 function buildRidePaths(rides) {
   const paths = [];
   const blockedTiles = simpleRideSolidTileSet(rides);
-  const clusters = clusterRides(rides).map((cluster) => ({
-    ...cluster,
-    rides: nearestRideOrder(cluster.rides, { x: Math.floor(PARK_WIDTH / 2), y: 4 })
-  }));
+  const connected = [{ id: "entrance", point: parkEntrancePoint() }];
+  const remaining = [...rides];
 
-  const remainingClusters = [...clusters];
-  let previousHubId = "entrance";
-  let previousPoint = { x: Math.floor(PARK_WIDTH / 2), y: 4 };
-
-  while (remainingClusters.length > 0) {
-    const nextIndex = nearestClusterIndex(remainingClusters, previousPoint);
-    const [cluster] = remainingClusters.splice(nextIndex, 1);
-    const hub = cluster?.rides[0];
-    if (hub === undefined) {
+  while (remaining.length > 0) {
+    const { rideIndex: nextIndex, source } = nearestRideConnection(remaining, connected);
+    const [ride] = remaining.splice(nextIndex, 1);
+    if (ride === undefined) {
       continue;
     }
 
-    paths.push(pathEdge(previousHubId, hub.id, previousPoint, ridePathEndpoint(hub), blockedTiles));
-    paths.push(...rideAccessEdges(hub, blockedTiles));
+    const endpoint = ridePathEndpoint(ride);
+    paths.push(pathEdge(source.id, ride.id, source.point, endpoint, blockedTiles));
+    connected.push({ id: ride.id, point: endpoint });
 
-    for (let index = 1; index < cluster.rides.length; index += 1) {
-      const previousRide = cluster.rides[index - 1];
-      const ride = cluster.rides[index];
-      if (previousRide !== undefined && ride !== undefined) {
-        paths.push(pathEdge(previousRide.id, ride.id, ridePathEndpoint(previousRide), ridePathEndpoint(ride), blockedTiles));
-        paths.push(...rideAccessEdges(ride, blockedTiles));
+    for (const accessTile of rideRequiredPathTiles(ride)) {
+      if (coordKey(endpoint) !== coordKey(accessTile)) {
+        paths.push(pathEdge(ride.id, ride.id, endpoint, accessTile, blockedTiles));
       }
     }
-
-    const tail = cluster.rides[cluster.rides.length - 1] ?? hub;
-    previousHubId = tail.id;
-    previousPoint = ridePathEndpoint(tail);
   }
 
   return paths;
 }
 
-function nearestRideOrder(rides, startPoint) {
-  const remaining = [...rides];
-  const ordered = [];
-  let current = startPoint;
-
-  while (remaining.length > 0) {
-    let bestIndex = 0;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (let index = 0; index < remaining.length; index += 1) {
-      const ride = remaining[index];
-      if (ride === undefined) {
-        continue;
-      }
-      const distance = manhattan(current, ridePathEndpoint(ride));
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestIndex = index;
-      }
-    }
-    const [next] = remaining.splice(bestIndex, 1);
-    if (next !== undefined) {
-      ordered.push(next);
-      current = ridePathEndpoint(next);
-    }
-  }
-
-  return ordered;
-}
-
-function nearestClusterIndex(clusters, point) {
-  let bestIndex = 0;
+function nearestRideConnection(rides, connected) {
+  let best = { rideIndex: 0, source: connected[0] ?? { id: "entrance", point: parkEntrancePoint() } };
   let bestDistance = Number.POSITIVE_INFINITY;
-  for (let index = 0; index < clusters.length; index += 1) {
-    const hub = clusters[index]?.rides[0];
-    if (hub === undefined) {
+  for (let rideIndex = 0; rideIndex < rides.length; rideIndex += 1) {
+    const ride = rides[rideIndex];
+    if (ride === undefined) {
       continue;
     }
-    const distance = manhattan(point, ridePathEndpoint(hub));
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestIndex = index;
+    const endpoint = ridePathEndpoint(ride);
+    for (const source of connected) {
+      const distance = manhattan(source.point, endpoint);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = { rideIndex, source };
+      }
     }
   }
-  return bestIndex;
+  return best;
 }
 
 function pathEdge(from, to, start, end, blockedTiles) {
   return {
     from,
     to,
-    waypoints: orthogonalWaypoints(start, end, blockedTiles)
+    waypoints: shortestPathBetween(start, end, blockedTiles)
   };
 }
 
-function rideAccessEdges(ride, blockedTiles) {
-  const endpoint = ridePathEndpoint(ride);
-  const entrance = entranceExitPathTile(ride, false);
-  const exit = entranceExitPathTile(ride, true);
-  const edges = [];
-
-  edges.push({
-    from: ride.id,
-    to: ride.id,
-    waypoints: orthogonalWaypoints(endpoint, entrance, blockedTiles)
-  });
-
-  if (entrance.x !== exit.x || entrance.y !== exit.y) {
-    edges.push({
-      from: ride.id,
-      to: ride.id,
-      waypoints: orthogonalWaypoints(endpoint, exit, blockedTiles)
-    });
-  }
-
-  return edges;
+function rideRequiredPathTiles(ride) {
+  return uniqueCoords([ridePathEndpoint(ride), entranceExitPathTile(ride, false), entranceExitPathTile(ride, true)]);
 }
 
-function orthogonalWaypoints(start, end, blockedTiles = new Set()) {
-  for (const xFirst of [true, false]) {
-    const direct = directOrthogonalWaypoints(start, end, xFirst);
-    if (!pathTouchesBlockedTile(direct, blockedTiles, start, end)) {
-      return direct;
+function uniqueCoords(coords) {
+  const seen = new Set();
+  const result = [];
+  for (const coord of coords) {
+    const key = coordKey(coord);
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(coord);
     }
   }
-
-  const routed = shortestPathAvoidingBlockedTiles(start, end, blockedTiles);
-  if (routed.length === 0) {
-    throw new Error(`No solid-footprint-safe path from ${coordKey(start)} to ${coordKey(end)}`);
-  }
-  return routed;
+  return result;
 }
 
-function directOrthogonalWaypoints(start, end, xFirst) {
-  const coords = [];
-  if (xFirst) {
-    const stepX = start.x <= end.x ? 1 : -1;
-    for (let x = start.x; x !== end.x; x += stepX) {
-      coords.push({ x, y: start.y });
-    }
-
-    const stepY = start.y <= end.y ? 1 : -1;
-    for (let y = start.y; y !== end.y; y += stepY) {
-      coords.push({ x: end.x, y });
-    }
-  } else {
-    const stepY = start.y <= end.y ? 1 : -1;
-    for (let y = start.y; y !== end.y; y += stepY) {
-      coords.push({ x: start.x, y });
-    }
-
-    const stepX = start.x <= end.x ? 1 : -1;
-    for (let x = start.x; x !== end.x; x += stepX) {
-      coords.push({ x, y: end.y });
-    }
-  }
-  coords.push(end);
-  return dedupeCoords(coords);
-}
-
-function pathTouchesBlockedTile(path, blockedTiles, start, end) {
-  return path.some((coord) => isBlockedPathTile(coord, blockedTiles, start, end));
-}
-
-function shortestPathAvoidingBlockedTiles(start, end, blockedTiles) {
+function shortestPathBetween(start, end, blockedTiles) {
   const startKey = coordKey(start);
   const endKey = coordKey(end);
   const queue = [start];
@@ -1654,7 +1563,7 @@ function shortestPathAvoidingBlockedTiles(start, end, blockedTiles) {
   }
 
   if (!previous.has(endKey)) {
-    return [];
+    throw new Error(`No solid-footprint-safe path from ${coordKey(start)} to ${coordKey(end)}`);
   }
 
   const path = [];
@@ -1669,8 +1578,6 @@ function orderedPathNeighbors(point, end) {
   return [
     { x: point.x + Math.sign(end.x - point.x), y: point.y },
     { x: point.x, y: point.y + Math.sign(end.y - point.y) },
-    { x: point.x - Math.sign(end.x - point.x), y: point.y },
-    { x: point.x, y: point.y - Math.sign(end.y - point.y) },
     { x: point.x + 1, y: point.y },
     { x: point.x - 1, y: point.y },
     { x: point.x, y: point.y + 1 },
@@ -1689,6 +1596,10 @@ function isBlockedPathTile(coord, blockedTiles, start, end) {
 
 function isInsideParkTile(coord) {
   return coord.x >= 0 && coord.y >= 0 && coord.x < PARK_WIDTH && coord.y < PARK_HEIGHT;
+}
+
+function parkEntrancePoint() {
+  return { x: Math.floor(PARK_WIDTH / 2), y: 4 };
 }
 
 function ridePathEndpoint(ride) {
