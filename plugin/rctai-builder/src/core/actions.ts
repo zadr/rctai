@@ -559,7 +559,7 @@ namespace RctaiBuilder {
       if (cachedSpecs === null) {
         const spineProfile = createEntranceSpineProfile(plan, adapter, state);
         cachedSpecs = createPathTileSpecs(path, coords, plan, adapter, state, spineProfile).map((spec) => {
-          return resolvePathNetwork(adapter, state).get(pathTileBuildSpecKey(spec)) ?? spec;
+          return resolvePathNetwork(adapter, state).get(pathCoordKey(spec.coord)) ?? spec;
         });
       }
       return cachedSpecs;
@@ -708,6 +708,11 @@ namespace RctaiBuilder {
     zByX: Map<number, number>;
   }
 
+  interface PathEndpointZOverrides {
+    startZ?: number;
+    endZ?: number;
+  }
+
   type PathNetworkResolver = (
     adapter: RctaiBuilder.BuilderAdapter,
     state: RctaiBuilder.JobState
@@ -761,10 +766,11 @@ namespace RctaiBuilder {
     plan: RctaiBuilder.ParkPlan,
     adapter: RctaiBuilder.BuilderAdapter,
     state: RctaiBuilder.JobState,
-    spineProfile?: EntranceSpineProfile
+    spineProfile?: EntranceSpineProfile,
+    zOverrides?: PathEndpointZOverrides
   ): PathTileBuildSpec[] {
-    const startZ = anchorBuildZ(path.from, plan, state);
-    const endZ = anchorBuildZ(path.to, plan, state);
+    const startZ = zOverrides?.startZ ?? anchorBuildZ(path.from, plan, state);
+    const endZ = zOverrides?.endZ ?? anchorBuildZ(path.to, plan, state);
     const profile = pathZProfileForPath(
       path,
       coords,
@@ -800,11 +806,11 @@ namespace RctaiBuilder {
     const byKey = new Map<string, PathNetworkBuildSpec>();
     for (const path of plan.paths ?? []) {
       const coords = expandPath(path, plan);
-      const specs = createPathTileSpecs(path, coords, plan, adapter, state, spineProfile);
+      const specs = createPathTileSpecs(path, coords, plan, adapter, state, spineProfile, pathEndpointZOverrides(coords, byKey));
       for (const spec of specs) {
-        const key = pathTileBuildSpecKey(spec);
+        const key = pathCoordKey(spec.coord);
         const existing = byKey.get(key);
-        const selected = existing === undefined ? spec : preferredPathSpec(existing, spec);
+        const selected = existing ?? spec;
         byKey.set(key, { ...selected, edges: existing?.edges ?? 0, isQueue: existing?.isQueue ?? false });
       }
     }
@@ -834,11 +840,22 @@ namespace RctaiBuilder {
     return byKey;
   }
 
-  function preferredPathSpec<T extends PathTileBuildSpec>(existing: T, candidate: PathTileBuildSpec): T | PathTileBuildSpec {
-    if (existing.slopeType === PATH_FLAT && candidate.slopeType === PATH_SLOPED) {
-      return candidate;
+  function pathEndpointZOverrides(
+    coords: RctaiBuilder.Coord[],
+    existingSpecs: Map<string, PathNetworkBuildSpec>
+  ): PathEndpointZOverrides {
+    const first = coords[0];
+    const last = coords[coords.length - 1];
+    const startZ = first === undefined ? undefined : existingSpecs.get(pathCoordKey(first))?.z;
+    const endZ = last === undefined ? undefined : existingSpecs.get(pathCoordKey(last))?.z;
+    const overrides: PathEndpointZOverrides = {};
+    if (startZ !== undefined) {
+      overrides.startZ = startZ;
     }
-    return existing;
+    if (endZ !== undefined) {
+      overrides.endZ = endZ;
+    }
+    return overrides;
   }
 
   function addRideAccessPathEdges(
@@ -1089,6 +1106,7 @@ namespace RctaiBuilder {
     enforceEndpointLandings(profile, minimum, maxFeasible, start, end, landingTiles);
     enforceStartRowLanding(coords, profile, minimum, maxFeasible, start);
     enforceTurnLandings(coords, profile, minimum, maxFeasible);
+    enforcePathStepLimits(profile, maxFeasible, start, end);
 
     return profile.map(clampBuildZ);
   }
