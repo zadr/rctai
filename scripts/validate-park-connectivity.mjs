@@ -280,7 +280,7 @@ function validateSimpleRideSolidFootprints(plan) {
     if (!isSimpleSolidRide(ride)) {
       continue;
     }
-    for (const tile of solidFootprintTileKeys(ride)) {
+    for (const tile of [...solidFootprintTileKeys(ride), ...accessBuildingTileKeys(ride)]) {
       const previous = solidOwners.get(tile);
       if (previous !== undefined && previous !== ride.id) {
         issues.push(`${ride.id} simple ride footprint overlaps ${previous} at ${tile}`);
@@ -334,6 +334,10 @@ function solidFootprintTileKeys(ride) {
   return keys;
 }
 
+function accessBuildingTileKeys(ride) {
+  return unique([coordKey(entranceExitLocation(ride, false)), coordKey(entranceExitLocation(ride, true))]);
+}
+
 function isSimpleSolidRide(ride) {
   return SIMPLE_SOLID_RIDE_TYPES.has(ride.rideType);
 }
@@ -364,6 +368,10 @@ function isInsidePark(coord, width, height) {
 
 function coordKey(coord) {
   return `${coord.x},${coord.y}`;
+}
+
+function unique(values) {
+  return [...new Set(values)];
 }
 
 function entranceExitPathTile(ride, isExit, width, height) {
@@ -418,21 +426,23 @@ function stationEntranceExitLocation(ride, isExit) {
 }
 
 function fallbackEntranceExitOffset(ride, isExit) {
-  if (isSimpleSolidRide(ride)) {
-    return {
-      x: isExit ? Math.max(ride.footprint.w - 1, 0) : 0,
-      y: ride.footprint.h,
-      direction: 3
-    };
+  return sideAccessOffset(ride.footprint, normalizeDirection(ride.rotation ?? 1), isExit);
+}
+
+function sideAccessOffset(footprint, side, isExit) {
+  const horizontal = side === 1 || side === 3;
+  const span = horizontal ? footprint.w : footprint.h;
+  const along = isExit ? Math.max(span - 1, 1) : 0;
+  if (side === 0) {
+    return { x: -1, y: along, direction: 2 };
   }
-  const direction = normalizeDirection(ride.rotation ?? 0);
-  if (!isExit) {
-    return { x: 0, y: ride.footprint.h, direction };
+  if (side === 1) {
+    return { x: along, y: footprint.h, direction: 3 };
   }
-  if (ride.footprint.w <= 1) {
-    return { x: 1, y: ride.footprint.h, direction };
+  if (side === 2) {
+    return { x: footprint.w, y: along, direction: 0 };
   }
-  return { x: Math.max(ride.footprint.w - 1, 0), y: ride.footprint.h, direction };
+  return { x: along, y: -1, direction: 1 };
 }
 
 function stationSideOffset(direction, isExit) {

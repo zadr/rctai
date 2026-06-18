@@ -1159,21 +1159,27 @@ namespace RctaiBuilder {
       return stationOffset;
     }
 
-    if (isSimpleSolidRide(ride)) {
-      return {
-        x: isExit ? Math.max(ride.footprint.w - 1, 0) : 0,
-        y: ride.footprint.h,
-        direction: 3
-      };
-    }
+    return sideAccessOffset(ride.footprint, normalizeDirection(ride.rotation ?? 1), isExit);
+  }
 
-    if (!isExit) {
-      return { x: 0, y: ride.footprint.h };
+  function sideAccessOffset(
+    footprint: RctaiBuilder.RidePlan["footprint"],
+    side: number,
+    isExit: boolean
+  ): RctaiBuilder.CoordD {
+    const horizontal = side === 1 || side === 3;
+    const span = horizontal ? footprint.w : footprint.h;
+    const along = isExit ? Math.max(span - 1, 1) : 0;
+    if (side === 0) {
+      return { x: -1, y: along, direction: 2 };
     }
-    if (ride.footprint.w <= 1) {
-      return { x: 1, y: ride.footprint.h };
+    if (side === 1) {
+      return { x: along, y: footprint.h, direction: 3 };
     }
-    return { x: Math.max(ride.footprint.w - 1, 0), y: ride.footprint.h };
+    if (side === 2) {
+      return { x: footprint.w, y: along, direction: 0 };
+    }
+    return { x: along, y: -1, direction: 1 };
   }
 
   function isSimpleSolidRide(ride: RctaiBuilder.RidePlan): boolean {

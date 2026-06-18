@@ -1304,7 +1304,7 @@ function rideCollidesAt(ride, position, { occupiedTrackKeys, occupiedTrackTiles,
   }
 
   if (isSimpleSolidRide(ride)) {
-    const solidTiles = solidFootprintTileKeys({ ...ride, position });
+    const solidTiles = simpleSolidTileKeys({ ...ride, position });
     return solidTiles.some(
       (solidTile) =>
         occupiedSolidTiles.has(solidTile) || occupiedTrackTiles.has(solidTile) || occupiedAccessTiles.has(solidTile)
@@ -1342,7 +1342,7 @@ function reserveRideOccupancy(ride, { occupiedTrackKeys, occupiedTrackTiles, occ
     occupiedAccessTiles.set(accessTile, ride.id);
   }
   if (isSimpleSolidRide(ride)) {
-    for (const solidTile of solidFootprintTileKeys(ride)) {
+    for (const solidTile of simpleSolidTileKeys(ride)) {
       occupiedSolidTiles.set(solidTile, ride.id);
     }
   }
@@ -1398,11 +1398,19 @@ function simpleRideSolidTileSet(rides) {
     if (!isSimpleSolidRide(ride)) {
       continue;
     }
-    for (const tile of solidFootprintTileKeys(ride)) {
+    for (const tile of simpleSolidTileKeys(ride)) {
       tiles.add(tile);
     }
   }
   return tiles;
+}
+
+function simpleSolidTileKeys(ride) {
+  return unique([...solidFootprintTileKeys(ride), ...accessBuildingTileKeys(ride)]);
+}
+
+function accessBuildingTileKeys(ride) {
+  return unique([coordKey(entranceExitLocation(ride, false)), coordKey(entranceExitLocation(ride, true))]);
 }
 
 function isSimpleSolidRide(ride) {
@@ -1664,20 +1672,23 @@ function stationEntranceExitLocation(ride, isExit) {
 }
 
 function fallbackEntranceExitOffset(ride, isExit) {
-  if (isSimpleSolidRide(ride)) {
-    return {
-      x: isExit ? Math.max(ride.footprint.w - 1, 0) : 0,
-      y: ride.footprint.h,
-      direction: 3
-    };
+  return sideAccessOffset(ride.footprint, normalizeDirection(ride.rotation ?? 1), isExit);
+}
+
+function sideAccessOffset(footprint, side, isExit) {
+  const horizontal = side === 1 || side === 3;
+  const span = horizontal ? footprint.w : footprint.h;
+  const along = isExit ? Math.max(span - 1, 1) : 0;
+  if (side === 0) {
+    return { x: -1, y: along, direction: 2 };
   }
-  if (!isExit) {
-    return { x: 0, y: ride.footprint.h, direction: normalizeDirection(ride.rotation ?? 0) };
+  if (side === 1) {
+    return { x: along, y: footprint.h, direction: 3 };
   }
-  if (ride.footprint.w <= 1) {
-    return { x: 1, y: ride.footprint.h, direction: normalizeDirection(ride.rotation ?? 0) };
+  if (side === 2) {
+    return { x: footprint.w, y: along, direction: 0 };
   }
-  return { x: Math.max(ride.footprint.w - 1, 0), y: ride.footprint.h, direction: normalizeDirection(ride.rotation ?? 0) };
+  return { x: along, y: -1, direction: 1 };
 }
 
 function stationSideOffset(direction, isExit) {
@@ -1795,7 +1806,7 @@ function validateSimpleRideSolidFootprints(generated) {
     if (!isSimpleSolidRide(ride)) {
       continue;
     }
-    for (const tile of solidFootprintTileKeys(ride)) {
+    for (const tile of simpleSolidTileKeys(ride)) {
       const previous = solidOwners.get(tile);
       if (previous !== undefined && previous !== ride.id) {
         issues.push(`${ride.id} simple ride footprint overlaps ${previous} at ${tile}`);
