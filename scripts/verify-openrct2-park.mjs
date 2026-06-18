@@ -236,11 +236,12 @@ async function waitForBuilder(port, timeoutMs) {
 async function getInspection(port, plan) {
   const inspection = await postJson(port, "/inspect", { footpaths: [] });
   const coords = inspectionFootpathCoords(plan, inspection.park.rides ?? []);
-  const trackRideIds = plannedTrackRideIds(plan, inspection.park.rides ?? []);
+  const trackRideIds = allInspectableRideIds(plan, inspection.park.rides ?? []);
+  const traversalRideIds = plannedTrackRideIds(plan, inspection.park.rides ?? []);
   inspection.park.footpaths = await fetchInspectionFootpaths(port, coords);
   inspection.park.tracks = await fetchInspectionTracks(port, trackRideIds);
   inspection.park.surfaces = await fetchInspectionSurfaces(port, surfaceCoordsForTracks(inspection.park.tracks));
-  inspection.park.trackTraversals = await fetchInspectionTrackTraversals(port, trackRideIds);
+  inspection.park.trackTraversals = await fetchInspectionTrackTraversals(port, traversalRideIds);
   inspection.park.trackSegments = await fetchInspectionTrackSegments(port, plannedTrackTypes(plan));
   return inspection;
 }
@@ -362,6 +363,21 @@ function plannedTrackRideIds(plan, actualRides) {
   return ids;
 }
 
+function allInspectableRideIds(plan, actualRides) {
+  const ids = [];
+  for (const expected of plan.rides ?? []) {
+    const rawVisual = Array.isArray(expected.track) && expected.track.some((segment) => segment.raw === true);
+    if (rawVisual) {
+      continue;
+    }
+    const actual = actualRides.find((ride) => ride.name === expected.id || ride.name.startsWith(`${expected.id} `));
+    if (actual !== undefined) {
+      ids.push(actual.id);
+    }
+  }
+  return ids;
+}
+
 function plannedTrackTypes(plan) {
   const types = new Set();
   for (const ride of plan.rides ?? []) {
@@ -404,6 +420,7 @@ function validateInspection(plan, inspection, phase) {
   const phaseIssues = [];
   const actualRides = inspection.park.rides ?? [];
   const footpaths = (inspection.park.footpaths ?? []).map((footpath) => normalizeInspectionCoord(footpath, plan));
+  const entranceElements = (inspection.park.entrances ?? []).map((entrance) => normalizeInspectionCoord(entrance, plan));
   const footpathsByXY = pathTilesByXY(footpaths);
   const tracksByRide = tracksByRideId(inspection.park.tracks ?? []);
   const traversalsByRide = traversalsByRideId(inspection.park.trackTraversals ?? []);
@@ -440,6 +457,9 @@ function validateInspection(plan, inspection, phase) {
       phaseIssues.push(`${phase}: ride ${expected.id} is missing an entrance or exit`);
     }
     if (!rawVisual) {
+      phaseIssues.push(
+        ...validateActualEntranceElements(expected, actual, entranceElements, tracksByRide.get(actual.id) ?? [], phase, plan)
+      );
       for (const access of actualAccessPathTiles(actual, plan)) {
         const tile = access.tile;
         const candidates = footpathsByXY.get(xyKey(tile)) ?? [];
@@ -1054,6 +1074,57 @@ function actualAccessPathTiles(ride, plan) {
   return tiles;
 }
 
+function validateActualEntranceElements(expected, actual, entranceElements, tracks, phase, plan) {
+  const issues = [];
+  for (const access of actualAccessLocations(actual, plan)) {
+    const matches = entranceElements.filter(
+      (element) =>
+        element.ride === actual.id &&
+        element.x === access.location.x &&
+        element.y === access.location.y &&
+        element.z === access.location.z &&
+        normalizeDirection(element.direction ?? 0) === access.direction
+    );
+    if (matches.length === 0) {
+      issues.push(
+        `${phase}: ride ${expected.id} ${access.label} has no visible entrance element at ${coordKey(access.location)}, direction ${access.direction}`
+      );
+      continue;
+    }
+    if (matches.every((element) => element.isHidden === true)) {
+      issues.push(`${phase}: ride ${expected.id} ${access.label} entrance element is hidden at ${coordKey(access.location)}`);
+    }
+    if (!tracks.some((track) => manhattan2d(track, access.location) <= 1)) {
+      issues.push(
+        `${phase}: ride ${expected.id} ${access.label} entrance element is not attached to the ride body/station at ${coordKey(access.location)}`
+      );
+    }
+  }
+  return issues;
+}
+
+function actualAccessLocations(ride, plan) {
+  const locations = [];
+  for (const station of ride.stations ?? []) {
+    if (station.entrance !== null) {
+      locations.push(accessLocation("entrance", station.entrance, plan));
+    }
+    if (station.exit !== null) {
+      locations.push(accessLocation("exit", station.exit, plan));
+    }
+  }
+  return locations;
+}
+
+function accessLocation(label, access, plan) {
+  const location = normalizeInspectionCoord(access, plan);
+  return {
+    label,
+    direction: normalizeDirection(location.direction ?? 0),
+    location
+  };
+}
+
 function accessPathTile(label, access, plan) {
   const location = normalizeInspectionCoord(access, plan);
   const direction = normalizeDirection(location.direction ?? 0);
@@ -1067,6 +1138,10 @@ function accessPathTile(label, access, plan) {
       z: location.z
     }, plan.park.size.width, plan.park.size.height)
   };
+}
+
+function manhattan2d(left, right) {
+  return Math.abs(left.x - right.x) + Math.abs(left.y - right.y);
 }
 
 function normalizeInspectionCoord(coord, plan) {

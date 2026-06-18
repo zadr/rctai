@@ -230,6 +230,7 @@ namespace RctaiBuilder {
             }))
         })),
         footpaths: inspectFootpaths(),
+        entrances: inspectEntrances(),
         crashes: this.crashEvents.slice(),
         messages: inspectParkMessages(),
         guests: inspectGuestProblems()
@@ -472,6 +473,31 @@ namespace RctaiBuilder {
       }
     }
     return footpaths;
+  }
+
+  function inspectEntrances(): RctaiBuilder.ParkInspectionEntrance[] {
+    const entrances: RctaiBuilder.ParkInspectionEntrance[] = [];
+    for (let x = 0; x < map.size.x; x += 1) {
+      for (let y = 0; y < map.size.y; y += 1) {
+        const tile = map.getTile(x, y);
+        for (const element of tile.elements) {
+          if (element.type === "entrance") {
+            entrances.push({
+              x,
+              y,
+              z: element.baseZ,
+              direction: element.direction,
+              ride: element.ride,
+              station: element.station,
+              sequence: element.sequence,
+              object: element.object,
+              isHidden: element.isHidden
+            });
+          }
+        }
+      }
+    }
+    return entrances;
   }
 
   function removeEntities(type: "guest" | "staff"): void {

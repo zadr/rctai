@@ -192,6 +192,7 @@ namespace RctaiBuilder {
     };
     rides: ParkInspectionRide[];
     footpaths: ParkInspectionFootpath[];
+    entrances: ParkInspectionEntrance[];
     crashes: RuntimeCrashEvent[];
     messages: ParkInspectionMessage[];
     guests: ParkInspectionGuest[];
@@ -254,6 +255,14 @@ namespace RctaiBuilder {
     queueBannerDirection?: number | null;
     ride?: number | null;
     station?: number | null;
+  }
+
+  export interface ParkInspectionEntrance extends CoordD {
+    ride: number;
+    station: number;
+    sequence: number;
+    object: number;
+    isHidden: boolean;
   }
 
   export interface ParkInspectionSurface {

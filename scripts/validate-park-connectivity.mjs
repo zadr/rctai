@@ -280,7 +280,7 @@ function validateSimpleRideSolidFootprints(plan) {
     if (!isSimpleSolidRide(ride)) {
       continue;
     }
-    for (const tile of [...solidFootprintTileKeys(ride), ...accessBuildingTileKeys(ride)]) {
+    for (const tile of simpleSolidTileKeys(ride)) {
       const previous = solidOwners.get(tile);
       if (previous !== undefined && previous !== ride.id) {
         issues.push(`${ride.id} simple ride footprint overlaps ${previous} at ${tile}`);
@@ -324,18 +324,23 @@ function validateSimpleRideSolidFootprints(plan) {
   return issues;
 }
 
-function solidFootprintTileKeys(ride) {
+function accessBuildingTileKeys(ride) {
+  return unique([coordKey(entranceExitLocation(ride, false)), coordKey(entranceExitLocation(ride, true))]);
+}
+
+function simpleSolidTileKeys(ride) {
+  return unique([...fallbackRideBodyTileKeys(ride), ...accessBuildingTileKeys(ride)]);
+}
+
+function fallbackRideBodyTileKeys(ride) {
+  const bounds = fallbackRideBodyBounds(ride);
   const keys = [];
-  for (let x = ride.position.x; x < ride.position.x + ride.footprint.w; x += 1) {
-    for (let y = ride.position.y; y < ride.position.y + ride.footprint.h; y += 1) {
+  for (let x = ride.position.x + bounds.x; x < ride.position.x + bounds.x + bounds.w; x += 1) {
+    for (let y = ride.position.y + bounds.y; y < ride.position.y + bounds.y + bounds.h; y += 1) {
       keys.push(coordKey({ x, y }));
     }
   }
   return keys;
-}
-
-function accessBuildingTileKeys(ride) {
-  return unique([coordKey(entranceExitLocation(ride, false)), coordKey(entranceExitLocation(ride, true))]);
 }
 
 function isSimpleSolidRide(ride) {
@@ -426,23 +431,92 @@ function stationEntranceExitLocation(ride, isExit) {
 }
 
 function fallbackEntranceExitOffset(ride, isExit) {
-  return sideAccessOffset(ride.footprint, normalizeDirection(ride.rotation ?? 1), isExit);
+  return sideAccessOffset(fallbackRideBodyBounds(ride), normalizeDirection(ride.rotation ?? 1), isExit);
 }
 
-function sideAccessOffset(footprint, side, isExit) {
+function fallbackRideBodyBounds(ride) {
+  const first = ride.track?.[0] ?? {};
+  const origin = { x: first.x ?? Math.floor(ride.footprint.w / 2), y: first.y ?? Math.floor(ride.footprint.h / 2) };
+  const direction = normalizeDirection(first.direction ?? ride.rotation ?? 0);
+  switch (first.type) {
+    case 66:
+    case 266:
+      return { x: origin.x - 1, y: origin.y - 1, w: 3, h: 3 };
+    case 258:
+      return rotatedBoxBounds(origin, { w: 2, h: 2 }, direction);
+    case 259:
+      return rotatedBoxBounds(origin, { w: 4, h: 4 }, direction);
+    case 257:
+    case 265:
+      return rotatedLineBounds(origin, 4, direction);
+    case 261:
+      return rotatedLineBounds(origin, 5, direction);
+    case 262:
+    case 264:
+      return { x: origin.x, y: origin.y, w: 1, h: 1 };
+    default:
+      return { x: 0, y: 0, w: ride.footprint.w, h: ride.footprint.h };
+  }
+}
+
+function rotatedBoxBounds(origin, size, direction) {
+  if (direction === 0) {
+    return { x: origin.x, y: origin.y, w: size.w, h: size.h };
+  }
+  if (direction === 1) {
+    return { x: origin.x, y: origin.y - size.h + 1, w: size.h, h: size.w };
+  }
+  if (direction === 2) {
+    return { x: origin.x - size.w + 1, y: origin.y - size.h + 1, w: size.w, h: size.h };
+  }
+  return { x: origin.x - size.w + 1, y: origin.y, w: size.h, h: size.w };
+}
+
+function rotatedLineBounds(origin, length, direction) {
+  const before = Math.floor((length - 1) / 2);
+  const after = length - before - 1;
+  if (direction === 0) {
+    return { x: origin.x - before, y: origin.y, w: length, h: 1 };
+  }
+  if (direction === 1) {
+    return { x: origin.x, y: origin.y - before, w: 1, h: length };
+  }
+  if (direction === 2) {
+    return { x: origin.x - after, y: origin.y, w: length, h: 1 };
+  }
+  return { x: origin.x, y: origin.y - after, w: 1, h: length };
+}
+
+function sideAccessOffset(bounds, side, isExit) {
   const horizontal = side === 1 || side === 3;
-  const span = horizontal ? footprint.w : footprint.h;
+  const span = horizontal ? bounds.w : bounds.h;
+  if (isExit && span <= 1) {
+    return perpendicularExitAccessOffset(bounds, side);
+  }
   const along = isExit ? Math.max(span - 1, 1) : 0;
   if (side === 0) {
-    return { x: -1, y: along, direction: 2 };
+    return { x: bounds.x - 1, y: bounds.y + along, direction: 2 };
   }
   if (side === 1) {
-    return { x: along, y: footprint.h, direction: 3 };
+    return { x: bounds.x + along, y: bounds.y + bounds.h, direction: 3 };
   }
   if (side === 2) {
-    return { x: footprint.w, y: along, direction: 0 };
+    return { x: bounds.x + bounds.w, y: bounds.y + along, direction: 0 };
   }
-  return { x: along, y: -1, direction: 1 };
+  return { x: bounds.x + along, y: bounds.y - 1, direction: 1 };
+}
+
+function perpendicularExitAccessOffset(bounds, side) {
+  if (side === 0) {
+    return { x: bounds.x, y: bounds.y - 1, direction: 1 };
+  }
+  if (side === 1) {
+    return { x: bounds.x + bounds.w, y: bounds.y + bounds.h - 1, direction: 0 };
+  }
+  if (side === 2) {
+    return { x: bounds.x + bounds.w - 1, y: bounds.y - 1, direction: 1 };
+  }
+  return { x: bounds.x + bounds.w, y: bounds.y, direction: 0 };
 }
 
 function stationSideOffset(direction, isExit) {
