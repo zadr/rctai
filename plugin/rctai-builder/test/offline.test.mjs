@@ -36,6 +36,7 @@ test("offline build opens every non-raw ride after constructing paths", () => {
   const plan = JSON.parse(readFileSync("../../fixtures/sample.park-plan.json", "utf8"));
   const result = RctaiBuilder.runOfflinePlan(plan);
   const pathIndex = result.actions.findIndex((action) => action.action === "footpathplace");
+  const parkOpenIndex = result.actions.findIndex((action) => action.action === "parksetparameter");
   const openRideIndices = result.actions
     .map((action, index) => ({ action, index }))
     .filter((entry) => entry.action.action === "ridesetstatus");
@@ -46,10 +47,24 @@ test("offline build opens every non-raw ride after constructing paths", () => {
   assert.equal(result.status.failedActions, 0);
   assert.equal(openRideIndices.length, expectedOpenCount);
   assert.ok(pathIndex >= 0);
+  assert.ok(parkOpenIndex >= 0);
+  assert.deepEqual(result.actions[parkOpenIndex]?.args, { parameter: 1, value: 0 });
   for (const entry of openRideIndices) {
     assert.ok(entry.index > pathIndex);
     assert.equal(entry.action.args.status, 1);
+    assert.ok(entry.index < parkOpenIndex);
   }
+});
+
+test("offline build leaves the park open for guests", () => {
+  const plan = JSON.parse(readFileSync("../../fixtures/sample.park-plan.json", "utf8"));
+  const adapter = new RctaiBuilder.FakeGameAdapter();
+  const controller = new RctaiBuilder.BuildController(adapter);
+  controller.enqueueBuild(plan);
+  const status = controller.runUntilIdle();
+
+  assert.equal(status.failedActions, 0);
+  assert.equal(adapter.inspectPark().isOpen, true);
 });
 
 test("offline build limits generated track rides to one train before opening", () => {

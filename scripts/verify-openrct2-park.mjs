@@ -437,6 +437,10 @@ function validateInspection(plan, inspection, phase) {
     phaseIssues.push(`${phase}: no accepted footpath at park entrance ${xyKey(plan.park.entrance)}`);
   }
 
+  if (inspection.park.isOpen !== true) {
+    phaseIssues.push(`${phase}: park is closed, expected open`);
+  }
+
   if ((inspection.park.crashes ?? []).length > 0) {
     for (const crash of inspection.park.crashes) {
       phaseIssues.push(

@@ -17,6 +17,7 @@ namespace RctaiBuilder {
     readonly logs: string[] = [];
     private nextRideId = 1;
     private readonly rideIds: number[] = [];
+    private parkOpen = false;
 
     executeAction(
       action: RctaiBuilder.GameActionName,
@@ -47,6 +48,14 @@ namespace RctaiBuilder {
         const index = this.rideIds.indexOf(args.ride);
         if (index >= 0) {
           this.rideIds.splice(index, 1);
+        }
+      }
+
+      if (action === "parksetparameter") {
+        if (args.parameter === 1) {
+          this.parkOpen = true;
+        } else if (args.parameter === 0) {
+          this.parkOpen = false;
         }
       }
 
@@ -107,6 +116,7 @@ namespace RctaiBuilder {
 
     inspectPark(): RctaiBuilder.ParkInspection {
       return {
+        isOpen: this.parkOpen,
         date: {
           ticksElapsed: 0,
           monthsElapsed: 0,

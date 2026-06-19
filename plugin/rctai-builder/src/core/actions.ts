@@ -108,6 +108,7 @@ namespace RctaiBuilder {
   const TRACK_PLACE_FLAG_INVERTED = 1 << 1;
   const LAND_SET_OWNERSHIP = 4;
   const OWNERSHIP_OWNED = 1 << 5;
+  const PARK_PARAMETER_OPEN = 1;
   const PATH_FLAT = 0;
   const PATH_SLOPED = 1;
   const PATH_HEIGHT_STEP = 16;
@@ -218,6 +219,7 @@ namespace RctaiBuilder {
         steps.push(createOpenRideStep(ride));
       }
     }
+    steps.push(createOpenParkStep());
 
     return steps;
   }
@@ -375,6 +377,19 @@ namespace RctaiBuilder {
       }
       adapter.executeAction("ridesetstatus", { ride: rideId, status: 1 }, done);
     }, { critical: true, rideId: ride.id });
+  }
+
+  function createOpenParkStep(): RctaiBuilder.QueuedStep {
+    return RctaiBuilder.createGameActionStep(
+      "open park",
+      "parksetparameter",
+      () => ({
+        parameter: PARK_PARAMETER_OPEN,
+        value: 0
+      }),
+      undefined,
+      { critical: true }
+    );
   }
 
   function createSingleTrainStep(ride: RctaiBuilder.RidePlan): RctaiBuilder.QueuedStep {

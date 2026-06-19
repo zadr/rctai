@@ -202,6 +202,7 @@ namespace RctaiBuilder {
 
     inspectPark(): RctaiBuilder.ParkInspection {
       return {
+        isOpen: park.getFlag("open"),
         date: {
           ticksElapsed: date.ticksElapsed,
           monthsElapsed: date.monthsElapsed,

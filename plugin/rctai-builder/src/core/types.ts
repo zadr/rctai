@@ -109,6 +109,7 @@ namespace RctaiBuilder {
     | "largesceneryplace"
     | "mapchangesize"
     | "parksetname"
+    | "parksetparameter"
     | "ridedemolish"
     | "ridecreate"
     | "rideentranceexitplace"
@@ -178,6 +179,7 @@ namespace RctaiBuilder {
   }
 
   export interface ParkInspection {
+    isOpen: boolean;
     date: {
       ticksElapsed: number;
       monthsElapsed: number;
